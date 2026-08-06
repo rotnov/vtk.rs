@@ -63,9 +63,10 @@ third-party deps are named because they are work items too, not free.
 - [ ] 1. `vtk-common-core` (`VTK::CommonCore`) — `DEPENDS: fast_float, fmt, kwiml, nlohmannjson,
       scn, token, vtksys` (+ optional `loguru`). No VTK-internal deps: the true root. `vtkMath`,
       `vtkPoints`, `vtkDataArray` family, object/array base types.
-- [ ] 2. `vtk-common-math` (`VTK::CommonMath`) — `DEPENDS: CommonCore, kissfft`. The FFT
-      dependency is real (`vtkFFT`); decide whether to pull a Rust FFT crate or port the
-      subset actually used.
+- [ ] 2. `vtk-common-math` (`VTK::CommonMath`) — `DEPENDS: CommonCore, kissfft`. kissfft is
+      replaced by `rustfft` + `realfft`, see `docs/decisions/0002-fft-backend.md`. Note the work
+      is in `vtkFFT`'s signal-processing layer (`Spectrogram`, `Csd`, window generators, scaling
+      and octave-band helpers), not in wiring up the transform.
 - [ ] 2. `vtk-common-system` (`VTK::CommonSystem`) — `DEPENDS: CommonCore`. Independent of
       `CommonMath`; can run in parallel with it.
 - [ ] 3. `vtk-common-transforms` (`VTK::CommonTransforms`) — `DEPENDS: CommonCore, CommonMath`.
