@@ -56,13 +56,14 @@ needed.
       `cargo test`, `cargo clippy -D warnings`, `cargo fmt --check`, and the coverage gate
       (`cargo llvm-cov --fail-under-lines 100 --fail-under-functions 100`, see
       `docs/decisions/0001-test-coverage-metric.md`).
-- [ ] Protect `master` on `rotnov/vtk.rs`: PR required, required status checks, no direct or
-      force pushes. **Blocked on the owner** — this is a GitHub repo setting needing their
-      token, not something an agent can commit.
+- [x] Protect `master` on `rotnov/vtk.rs` — done: PR required, 0 approvals, no direct or force
+      pushes, no deletion, linear history, `enforce_admins` on.
+- [ ] Add the required status checks to that protection once CI exists. Until then "green CI is
+      the review" is an honour system, since there is nothing to require.
 - [ ] `docs/test-mapping.csv` schema + a small script/xtask to summarize coverage
-      (ported/passing/deferred counts per module), plus `cargo xtask ledger-verify` (every
-      `original_path` still exists in the reference tree) wired into CI as a required check —
-      see `docs/decisions/0003-upstream-sync-strategy.md`.
+      (ported/passing/deferred counts per module), plus `cargo xtask ledger-check` — the three
+      assertions *exists* / *complete* / *fresh* — wired into CI as a required check. See
+      `docs/decisions/0003-upstream-sync-strategy.md`.
 - [ ] `cargo xtask upstream-diff <old-tag> <new-tag>` — bucket the upstream diff by module into
       tests added / removed / changed and sources changed in ported modules. Not needed until the
       first version bump, but it is what makes that bump reviewable rather than opaque.

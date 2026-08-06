@@ -60,12 +60,35 @@ that imply four different kinds of work:
 Only the ledger can say which of these touch us, which is why it has to be trustworthy before a
 bump, not after.
 
-### Ledger integrity is a CI check, not a discipline
+### Ledger integrity is a CI check, not a discipline — and it takes three assertions
 
-Add `cargo xtask ledger-verify` to the required checks: every `original_path` in
-`docs/test-mapping.csv` must exist in the reference tree. It is nearly free, it fails loudly at
-exactly the moment a bump breaks a mapping, and it removes the possibility of the ledger drifting
-from the tree unnoticed between bumps.
+Add `cargo xtask ledger-check` to the required checks. One check walking one direction is not
+enough; each of the three failures below is invisible to the other two.
+
+- **exists** — every `original_path` in `docs/test-mapping.csv` is present in the reference tree.
+  Catches tests upstream removed or renamed.
+- **complete** — for every module with at least one ledger row, every test registered in that
+  module's `Testing/*/CMakeLists.txt` has a row. Catches tests **added** upstream. Nothing else
+  can: a new test is named by no row, so *exists* iterates right past it. Scoped to started
+  modules deliberately — unscoped it fails on all 2388 untouched tests on day one, and a check
+  that is red by default gets switched off rather than fixed.
+- **fresh** — every row's `original_sha` still matches the blob SHA of its `original_path`.
+  Catches upstream **rewriting** a test we already ported.
+
+*fresh* is the one that justifies a schema change, and it is the most valuable of the three. When
+upstream rewrites a ported test, the path exists and the row looks correct; our port keeps passing
+the assertions it was written against, CI stays green, and the behaviour we claim parity with has
+moved underneath. A removed test is noisy. This is silent, and silence is precisely what the
+ledger exists to prevent.
+
+It requires an `original_sha` column: the git blob SHA of the original file at port time. Per
+file, not per test function, so rows sharing a file share a SHA and a change flags all of them.
+Coarse on purpose — it costs one `git rev-parse`, needs no C++ parsing, and its failure mode is
+re-reading a test that didn't really change, which is far cheaper than missing one that did.
+
+Answering *fresh* means re-reading the upstream test and re-porting what changed, then updating
+the SHA in the same commit. Updating the SHA alone deletes the alarm instead of answering it, and
+is the one move that makes the whole ledger worthless.
 
 ### Versioning: our own semver, upstream recorded separately
 
@@ -91,14 +114,15 @@ cost.
 
 - The bump becomes a reviewable, repeatable operation with a written output, instead of a large
   opaque commit.
-- `ledger-verify` will fail on the *first* bump, loudly, for every test upstream moved. That is
-  the intended behaviour and the point of the check: the work is surfaced rather than skipped.
+- `ledger-check` will fail on the *first* bump, loudly, on all three assertions at once — moved
+  tests, added tests, rewritten tests. That is the intended behaviour and the point of the check:
+  the work is surfaced rather than skipped.
 - Merging keeps history intact, so PR references and commit SHAs stay valid across bumps — unlike
   the one-off rebase that fixed the original mis-pin.
 - The `+vtk9.6.2` tag convention means anyone can tell which upstream a release was built against
   without reading the source.
 - Recording upstream in two places (a constant and `ROADMAP.md`) is duplication and can drift.
-  Accepted deliberately: both are needed, one by code and one by readers. `ledger-verify` is the
+  Accepted deliberately: both are needed, one by code and one by readers. `ledger-check` is the
   backstop that catches the version being wrong in practice.
 
 ## Alternatives rejected

@@ -89,11 +89,20 @@ branch (`master`).
 4. CI must be green, then merge it yourself. There is no human reviewer (see **This project is
    AI-autopilot**) — green CI *is* the review. Never merge a red or pending PR.
 
-`master` is protected: PR required, required status checks must pass, no direct pushes, no
-force-pushes. That is a GitHub repository setting on `rotnov/vtk.rs`, **not** a file in the tree
-— committing something cannot create it. Enabling it is a one-time API call needing the owner's
-token, i.e. a credentials blocker to surface, not to work around. If protection is not in place
-yet, say so instead of assuming it is.
+`master` is protected, and this is live on `rotnov/vtk.rs` today: pull request required, zero
+approvals (there is no human reviewer), no direct pushes, no force-pushes, no branch deletion,
+linear history, and `enforce_admins` on so the rules bind admins too.
+
+Required status checks are **not** configured yet — there is no CI to require, because `rust/`
+does not exist. Wire them up with the workflow (Phase 0), or the "green CI is the review" rule
+above is an honour system.
+
+Protection is a GitHub repository setting, not a file in the tree; committing something cannot
+change it. Verify rather than assume:
+
+```sh
+gh api repos/rotnov/vtk.rs/branches/master/protection
+```
 
 ### Required checks
 
@@ -101,9 +110,9 @@ yet, say so instead of assuming it is.
 - `cargo clippy --workspace --all-targets --all-features -- -D warnings`
 - `cargo fmt --all --check`
 - `cargo check --target wasm32-unknown-unknown` for `Common*`/`Filters*` — see **WebAssembly**
-- `cargo xtask ledger-verify` — every `original_path` in `docs/test-mapping.csv` still exists in
-  the reference tree. Cheap, and it fails loudly the moment a version bump breaks a mapping
-  instead of letting the ledger drift
+- `cargo xtask ledger-check` — the three ledger assertions (*exists*, *complete*, *fresh*); see
+  **The test-mapping ledger**. Cheap, and it fails loudly the moment the ledger stops describing
+  the reference tree instead of letting it drift
 - the coverage gate, below
 
 CI lives in `.github/workflows/` (ours). The root `.gitlab-ci.yml` is upstream VTK's and is
@@ -428,18 +437,24 @@ One row per **original test function**, not per file: a single `.cxx` commonly r
 tests, and the rule is one `#[test]` per original test function.
 
 ```csv
-original_path,original_test,rust_path,rust_test,category,status,notes
+original_path,original_test,original_sha,rust_path,rust_test,category,status,notes
 ```
 
 | column | meaning |
 |---|---|
 | `original_path` | path in the reference tree, e.g. `Common/Core/Testing/Cxx/TestArrayAPI.cxx` |
 | `original_test` | the registered CTest name |
+| `original_sha` | git blob SHA of `original_path` at port time — `git rev-parse HEAD:<path>` |
 | `rust_path` | e.g. `rust/crates/vtk-common-core/src/array/api.rs` |
 | `rust_test` | the `#[test]` function name, empty while `status=deferred` |
 | `category` | `1` pure-logic · `2` round-trip · `3` external-data |
 | `status` | `deferred` · `spec` · `ported` · `skipped` |
 | `notes` | required for `skipped` and `deferred`, free text otherwise |
+
+`original_sha` is per *file*, so rows sharing an original file share a SHA and a change to that
+file flags all of them. Coarser than per-function, and deliberately so: it costs one
+`git rev-parse`, needs no C++ parsing, and the failure mode is re-reading a test that didn't
+actually change — which is cheap, unlike the alternative of not noticing one that did.
 
 `status` values:
 
@@ -454,6 +469,30 @@ original_path,original_test,rust_path,rust_test,category,status,notes
 Update the ledger in the same commit as the test it describes — never as a follow-up. A row whose
 `status` disagrees with what CI actually runs is worse than no row, because the whole point is
 that parity claims stay auditable.
+
+### What CI checks about the ledger
+
+`cargo xtask ledger-check` asserts three separate things. They are separate because each catches a
+failure the others cannot see:
+
+- **exists** — every `original_path` is present in the reference tree. Catches tests upstream
+  removed or renamed.
+- **complete** — for every module that already has at least one ledger row, *every* test
+  registered in that module's `Testing/*/CMakeLists.txt` has a row. Catches tests added upstream,
+  which nothing else would: a new test is referenced by no row, so **exists** passes over it in
+  silence. Scoped to started modules on purpose — unscoped it would fail on every untouched test
+  in VTK from day one, and a check that is red by default gets switched off.
+- **fresh** — every row's `original_sha` matches the file's current blob. Catches upstream
+  rewriting a test we already ported.
+
+**fresh** is the one worth having even though it is the fussiest. When upstream rewrites a ported
+test, the path still exists and the row still looks right; our port keeps passing its old
+assertions and CI stays green while the behaviour we claim parity with has moved. A deleted test
+is at least noisy. This is silent, and silence is what the ledger exists to prevent.
+
+When **fresh** fires, re-read the upstream test, re-port what changed, and update `original_sha`
+in the same commit. Never update the SHA on its own — that is deleting the alarm instead of
+answering it.
 
 ## Commands
 
