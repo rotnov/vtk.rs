@@ -179,7 +179,10 @@ fixtures (no image baseline) pass.
 - [ ] Pick and record the backend decision in `docs/decisions/` — default assumption: `wgpu`,
       not a port of `RenderingOpenGL2`. `vtk-rendering-core` defines the same conceptual
       surface (`Renderer`, `RenderWindow`, `Actor`, `Mapper`) but the backend is new code, not a
-      translation of `Rendering/OpenGL2`.
+      translation of `Rendering/OpenGL2`. **Read `Rendering/WebGPU` in the reference tree before
+      deciding** — upstream already has a WebGPU backend, so this is closer to porting an
+      existing module than to inventing one, and its structure is evidence about which
+      abstractions survive the move off OpenGL.
 - [ ] `vtk-rendering-core` — scene graph, camera, actor/mapper/property model.
 - [ ] First category-3 tests become portable here: prefer converting pixel-comparison tests to
       data/geometry assertions (compare the mesh fed to the renderer, not the rendered pixels)
