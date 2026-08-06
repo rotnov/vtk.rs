@@ -11,6 +11,63 @@ port is built incrementally in `rust/`, module by module, alongside it.
 Upstream: https://github.com/Kitware/VTK
 Fork: https://github.com/rotnov/vtk.rs
 
+## Rule 1: learn from your own mistakes
+
+This is the first rule because it is the one that repairs all the others.
+
+Nothing here is fixed by a human. When a test fails, a review finds a gap, or a document turns
+out to have lied about itself, no maintainer notices and corrects the process. If the agent that
+learned the lesson doesn't write it down, it is lost, and the next agent pays for it again.
+
+So every mistake ends in an artifact, and the artifact escalates:
+
+1. **Record it.** A new numbered file in `docs/lessons/` — what happened, what caused it, what
+   would have caught it. Same commit as the fix, never a follow-up. One file per lesson, never an
+   append-only log: a growing file stops being read, and these have to stay greppable.
+2. **Promote on repeat.** A lesson that fires a second time isn't a lesson, it's a missing
+   control. Make it a rule, and set the lesson's `status: promoted`.
+3. **Terminate it in a check.** The final form of a rule is CI, not a paragraph. "We broke X
+   twice" becomes a check that makes X impossible. Set `status: enforced` and name the check in
+   `enforced_by`.
+
+The ratio of *enforced* to *open* across `docs/lessons/` is the honest measure of whether this
+project is learning or merely journalling.
+
+Step 3 is what stops this from eating the project. Learning must *shrink* this file, not grow it:
+a rule that is only written down competes for attention with every other rule, while a rule that
+is enforced costs nothing to remember. If you find yourself adding a paragraph to `AGENTS.md`,
+first ask whether it could be a check.
+
+### Critical thinking
+
+**Verify, don't trust — this repository's own documents included.** They have twice asserted
+things about the tree that were false:
+
+- `ROADMAP.md` said its module order was "verified by reading the actual files, not assumed".
+  Three of Phase 1's dependencies were wrong and four prerequisite modules were missing.
+- Every document said the tree was pinned at `v9.6.2`. It held a 9.7 development snapshot, with
+  no tags in the repository at all.
+
+Both survived because they were *read* rather than *checked*. Before acting on a claim about the
+reference tree, the build, or the state of the port, run the command that would falsify it.
+Prefer a claim you can re-derive in one command over one you have to take on faith — and when you
+write a claim, include the command that checks it.
+
+A green CI is evidence that the checks passed, not that the work is right. Ask what a check
+cannot see before concluding from it.
+
+### Think several steps ahead
+
+Before implementing, ask what this makes harder later — not only whether it works now. There is
+no reviewer to catch a choice that is convenient for the module in front of you and wrong for the
+twenty behind it, and 278 modules to propagate it through. That is the expensive kind of mistake
+here.
+
+When a decision is hard to reverse — a public API shape, a dependency, a data representation, a
+file format — say so out loud, record it as an ADR under `docs/decisions/`, and name what would
+force a reversal. A decision whose reversal conditions are written down can be revisited. One
+that was never articulated just calcifies.
+
 ## Language
 
 **Everything committed to this repository is written in English** — code, identifiers,
@@ -135,11 +192,13 @@ feature sets leave regions no test can reach. Rationale:
 No coverage exclusions — no `#[coverage(off)]`, no `--ignore-filename-regex` — without an ADR in
 `docs/decisions/` naming the file and the reason.
 
-**How this squares with deferred tests.** It doesn't conflict with **Testing strategy**; it
-enforces it. Category-3 tests stay deferred until their phase, so the rule is simply: *don't
-implement what no ported test exercises.* If a method cannot be covered because the test that
-would cover it belongs to a later phase, the method belongs to a later phase too. Uncovered code
-means you ported ahead of the tests — it is never a reason to loosen the gate.
+**What this gate does and does not enforce.** It proves every line that exists is executed by
+some test. It does **not** prove the port tracks VTK, because an own test satisfies it just as
+well as a ported one — see **Tests we write ourselves**. Parity is a separate gate.
+
+Uncovered code still means you got ahead of your tests, and is never a reason to loosen the gate:
+if a method cannot be covered because the test that would cover it belongs to a later phase, the
+method belongs to a later phase too.
 
 ## Repository layout
 
@@ -164,6 +223,8 @@ rust/                 the actual Rust port (Cargo workspace). All new work happe
     ...                one crate per ported VTK module, see ROADMAP.md for order
 docs/
   test-mapping.csv      traceability ledger, one row per original test function
+  lessons/               one file per lesson learned (AGENTS.md Rule 1)
+  sessions/              one file per working session, YYYY/MM/
   decisions/             short ADR-style notes for non-obvious design calls
 .claude/
   skills/                skills installed from https://www.skills.sh (project scope)
