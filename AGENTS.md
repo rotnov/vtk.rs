@@ -150,7 +150,7 @@ rust/                 the actual Rust port (Cargo workspace). All new work happe
     vtk-filters-core/
     ...                one crate per ported VTK module, see ROADMAP.md for order
 docs/
-  test-mapping.csv      traceability: original VTK test path -> rust test -> status
+  test-mapping.csv      traceability ledger, one row per original test function
   decisions/             short ADR-style notes for non-obvious design calls
 .claude/
   skills/                skills installed from https://www.skills.sh (project scope)
@@ -267,8 +267,8 @@ Workflow per module:
    in the reference tree. Read both files whole. Take `DEPENDS` *and* `PRIVATE_DEPENDS` — private
    deps are real build dependencies and are how `ROADMAP.md` came to omit four prerequisite
    modules from Phase 3.
-2. Classify every test into one of the three buckets above; record it in
-   `docs/test-mapping.csv` (`original_path,rust_path,category,status`).
+2. Classify every test into one of the three buckets above and record it in
+   `docs/test-mapping.csv` — see **The test-mapping ledger** below.
 3. Port category-1 tests first as failing `#[test]`s (red).
 4. Implement the minimum to make them pass (green), refactor.
 5. Port category-2 tests for the same module; they should already pass once the module is
@@ -277,6 +277,44 @@ Workflow per module:
 
 Don't try to port thousands of tests up front — triage and port per-module, in the order
 `ROADMAP.md` defines.
+
+## The test-mapping ledger
+
+`docs/test-mapping.csv` answers one question the code cannot: *how much of VTK's suite does this
+port actually answer for?* Coverage says the code that exists is exercised; it says nothing about
+how much VTK there is left. An empty crate scores 100%. The two signals are only meaningful
+together — cite both when claiming progress.
+
+One row per **original test function**, not per file: a single `.cxx` commonly registers several
+tests, and the rule is one `#[test]` per original test function.
+
+```csv
+original_path,original_test,rust_path,rust_test,category,status,notes
+```
+
+| column | meaning |
+|---|---|
+| `original_path` | path in the reference tree, e.g. `Common/Core/Testing/Cxx/TestArrayAPI.cxx` |
+| `original_test` | the registered CTest name |
+| `rust_path` | e.g. `rust/crates/vtk-common-core/src/array/api.rs` |
+| `rust_test` | the `#[test]` function name, empty while `status=deferred` |
+| `category` | `1` pure-logic · `2` round-trip · `3` external-data |
+| `status` | `deferred` · `spec` · `ported` · `skipped` |
+| `notes` | required for `skipped` and `deferred`, free text otherwise |
+
+`status` values:
+
+- `deferred` — its phase has not come. `notes` names the blocking phase or module.
+- `spec` — ported as an `#[ignore]`d spec under `tests/`, not yet satisfied. It does not run, so
+  it does not count toward coverage; that is deliberate, see
+  `docs/decisions/0001-test-coverage-metric.md`.
+- `ported` — ported, running, green in CI.
+- `skipped` — deliberately not ported. `notes` must say why. A C++-ism with no Rust analogue is a
+  reason; "hard" is not.
+
+Update the ledger in the same commit as the test it describes — never as a follow-up. A row whose
+`status` disagrees with what CI actually runs is worse than no row, because the whole point is
+that parity claims stay auditable.
 
 ## Commands
 
