@@ -100,6 +100,10 @@ yet, say so instead of assuming it is.
 - `cargo test --workspace --all-features`
 - `cargo clippy --workspace --all-targets --all-features -- -D warnings`
 - `cargo fmt --all --check`
+- `cargo check --target wasm32-unknown-unknown` for `Common*`/`Filters*` — see **WebAssembly**
+- `cargo xtask ledger-verify` — every `original_path` in `docs/test-mapping.csv` still exists in
+  the reference tree. Cheap, and it fails loudly the moment a version bump breaks a mapping
+  instead of letting the ledger drift
 - the coverage gate, below
 
 CI lives in `.github/workflows/` (ours). The root `.gitlab-ci.yml` is upstream VTK's and is
@@ -198,6 +202,40 @@ A dated `VTK_BUILD_VERSION` (e.g. `20260806`) means a development snapshot, not 
 
 Do not silently move to a newer tag. Bumping it invalidates parts of `docs/test-mapping.csv` and
 every count in `ROADMAP.md` § Snapshot, and must be recorded in `docs/decisions/`.
+
+### Advancing the pin
+
+Strategy and rationale: `docs/decisions/0003-upstream-sync-strategy.md`. The procedure:
+
+1. **Fetch and check the shape.** Merging only works while the new tag descends from the current
+   pin, and VTK tags releases off release branches, so this is not a given:
+
+   ```sh
+   git fetch --no-tags upstream tag vX.Y.Z
+   git merge-base --is-ancestor v9.6.2 vX.Y.Z && echo linear || echo diverged
+   ```
+
+   Linear → `git merge vX.Y.Z`, which is conflict-free because our files do not exist upstream.
+   A conflict means something was written outside the writable paths; fix that, don't resolve it.
+   Diverged → rebase onto the new tag and force-push, which rewrites public history and is a
+   deliberate, announced act.
+
+2. **Bucket the diff by module** — `git diff --name-status <old-tag> vX.Y.Z` — and sort every
+   entry into one of four kinds, because they imply different work:
+
+   - *test added* → new ledger row, `status=deferred`, triaged into a phase;
+   - *test removed or renamed* → our ported test is orphaned; keep it as a regression test or drop
+     it, and say which in `notes`;
+   - *test changed* → our port may have diverged silently while still passing; re-port it;
+   - *source changed in an already-ported module* → re-read the diff against our implementation.
+     A bug fixed upstream is a bug still present here.
+
+3. **Recount** `ROADMAP.md` § Snapshot with the commands recorded there.
+
+4. **Write the ADR** for this bump: old tag, new tag, diff summary, what it cost.
+
+Never bump in the middle of a phase — it moves the target while modules are being ported against
+it. Bump for a reason, not on a schedule.
 
 ## Rust workspace conventions
 
