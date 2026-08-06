@@ -9,13 +9,30 @@ the module pass; see `AGENTS.md` for test categories)
   `Rendering`, `Interaction`, `Imaging`, `Charts`, `Views`, `Domains`, `Parallel`, `Geovis`,
   `Infovis`, `Accelerators`, `Web`, `Wrapping`, `GUISupport`.
 - 270 `Testing/` directories, 2388 C++ test files, 921 Python test files.
-- 73 `Testing/Cxx` dirs register tests with `NO_DATA NO_VALID NO_OUTPUT` (pure-logic, no
-  external baseline) — these are the cheapest to port and drive the phase-1 TDD loop.
 - 173 `DATA{...}` (ExternalData baseline) references repo-wide — mostly `Rendering*`, some
   `Filters*`/`IO*`. Deferred per module until the relevant phase.
-- Module order below follows each module's `DEPENDS` in its `vtk.module` file (verified by
-  reading the actual files, not assumed) — this is a real topological slice of VTK's own build
-  graph, not a guess.
+- Module order below follows each module's `DEPENDS` in its `vtk.module` file, read per module
+  and quoted inline in each phase so it can be re-checked without redoing the work.
+
+**These counts are unverified.** None of them reproduces against the tree currently in this
+repository under any counting variant tried. That is entangled with an open question about which
+upstream version this repo actually contains (see **Open questions**) — most of the deltas are
+undercounts, consistent with the figures having been taken from an older tree. Do not build
+estimates on them until the version question is settled and they are recounted.
+
+**Sizing caveat: pure-logic tests are counted wrong.** `vtk_add_test_cxx` accepts its flags in
+two forms, and only one of them was ever measured:
+
+- *block-level*, applying to a whole list — `vtk_add_test_cxx(tgt tests` / `NO_DATA NO_VALID
+  NO_OUTPUT` / `<many tests>)`;
+- *per-test*, comma-separated — `TestFoo.cxx,NO_DATA,NO_VALID`.
+
+Grepping the first form counts **lines, not directories, and not tests**. One hit covers a whole
+block: `Common/Core/Testing/Cxx/CMakeLists.txt` registers ~95 tests under a single such block,
+`Common/DataModel/Testing/Cxx` roughly 133. The per-test comma form is invisible to that grep
+entirely despite being widespread. So the earlier "73 directories" figure understated Phase 1 by
+about an order of magnitude. Classify by reading each `CMakeLists.txt` and handling both forms —
+see `AGENTS.md` § Testing strategy.
 
 Most of VTK's 278 modules are long-tail format/domain support (CGNS, ADIOS2, USD, OpenVR,
 MySQL/ODBC/PostgreSQL readers, ...). This roadmap only sequences the core that everything else
@@ -40,44 +57,108 @@ needed.
 
 ## Phase 1 — `Common*` (no VTK-internal deps beyond this group)
 
-Dependency-ordered:
+Dependency-ordered. Each entry lists the module's `DEPENDS` verbatim from its `vtk.module`;
+third-party deps are named because they are work items too, not free.
 
-1. `vtk-common-core` (`VTK::CommonCore`) — depends only on third-party (`fast_float`, `fmt`,
-   `vtksys`, ...), no other VTK module. True root. `vtkMath`, `vtkPoints`, `vtkDataArray` family,
-   object/array base types.
-2. `vtk-common-math`, `vtk-common-transforms`, `vtk-common-system`, `vtk-common-misc` — depend
-   on `CommonCore` only, largely independent of each other. Can be done in parallel.
-3. `vtk-common-data-model` (`VTK::CommonDataModel`) — depends on `CommonCore`, `CommonMath`,
-   `CommonTransforms` (+ private: `CommonMisc`, `CommonSystem`). Cells, `vtkPolyData`,
-   `vtkUnstructuredGrid`, geometry primitives. The real foundation everything else builds on.
-4. `vtk-common-execution-model` (`VTK::CommonExecutionModel`) — the `vtkAlgorithm` pipeline
-   (`Update()`, dirty-flag propagation). Needed before any filter exists.
+- [ ] 1. `vtk-common-core` (`VTK::CommonCore`) — `DEPENDS: fast_float, fmt, kwiml, nlohmannjson,
+      scn, token, vtksys` (+ optional `loguru`). No VTK-internal deps: the true root. `vtkMath`,
+      `vtkPoints`, `vtkDataArray` family, object/array base types.
+- [ ] 2. `vtk-common-math` (`VTK::CommonMath`) — `DEPENDS: CommonCore, kissfft`. The FFT
+      dependency is real (`vtkFFT`); decide whether to pull a Rust FFT crate or port the
+      subset actually used.
+- [ ] 2. `vtk-common-system` (`VTK::CommonSystem`) — `DEPENDS: CommonCore`. Independent of
+      `CommonMath`; can run in parallel with it.
+- [ ] 3. `vtk-common-transforms` (`VTK::CommonTransforms`) — `DEPENDS: CommonCore, CommonMath`.
+- [ ] 3. `vtk-common-misc` (`VTK::CommonMisc`) — `DEPENDS: CommonCore, CommonMath` (+ private
+      `exprtk`, backing `vtkFunctionParser` — a full expression parser, size it before starting).
+- [ ] 4. `vtk-common-data-model` (`VTK::CommonDataModel`) — `DEPENDS: CommonCore, CommonMath,
+      CommonTransforms` (+ private `CommonMisc`, `CommonSystem`, `pegtl`, `pugixml`). Cells,
+      `vtkPolyData`, `vtkUnstructuredGrid`, geometry primitives. The real foundation everything
+      else builds on.
+- [ ] 5. `vtk-common-execution-model` (`VTK::CommonExecutionModel`) — `DEPENDS: CommonCore,
+      CommonDataModel` (+ private `CommonMisc`, `CommonSystem`). The `vtkAlgorithm` pipeline
+      (`Update()`, dirty-flag propagation). Needed before any filter exists.
 
-**Exit criteria**: all category-1 (`NO_DATA NO_VALID NO_OUTPUT`) tests from
-`Common/Core/Testing/Cxx` and `Common/DataModel/Testing/Cxx` ported and passing.
+Numbers are dependency levels, not a strict sequence: items sharing a number are independent of
+each other. So the real shape is `Core` → {`Math`, `System`} → {`Transforms`, `Misc`} →
+`DataModel` → `ExecutionModel`, **not** "everything after `CommonCore` in parallel".
+
+`CommonCache`, `CommonColor` and `CommonComputationalGeometry` are also `Common*` modules but are
+not needed until Phase 3 — see there.
+
+**Exit criteria**: all category-1 tests from `Common/Core/Testing/Cxx` and
+`Common/DataModel/Testing/Cxx` ported and passing. Note this is a much larger body of work than
+a directory count suggests — those two directories alone hold on the order of 230 pure-logic
+tests (see **Sizing caveat** in the Snapshot).
 
 ## Phase 2 — IO (Legacy + XML), round-trip tests as acceptance criteria
 
-1. `vtk-io-legacy` (`VTK::IOLegacy`) — `.vtk` reader/writer.
-2. `vtk-io-xml` (`VTK::IOXML`) — `.vtp`/`.vtu`/etc. reader/writer.
+Neither reader/writer module is reachable directly — both sit on `IOCore`, and each pulls one
+more module the earlier version of this roadmap omitted:
 
-IO is deliberately phase 2, ahead of filters: its tests are self-verifying round-trips
-(write, read back, compare — see `IO/Legacy/Testing/Cxx`, e.g.
-`TestLegacyCompositeDataReaderWriter.cxx`) with no rendering or external baseline dependency,
-so they're a strong, cheap regression net, and file compatibility with real-world `.vtk`/`.vtu`
-files is usually the actual practical goal of a port like this.
+- [ ] 1. `vtk-io-core` (`VTK::IOCore`) — `DEPENDS: CommonCore, CommonExecutionModel` (+ private
+      `CommonDataModel`, `CommonMisc`, `lz4`, `lzma`, `zlib`, `utf8`, `fast_float`). Compression
+      and encoding substrate for everything below.
+- [ ] 2. `vtk-io-xml-parser` (`VTK::IOXMLParser`) — `DEPENDS: CommonCore, CommonDataModel`
+      (+ private `IOCore`, `expat`). In Rust this is where an XML crate gets chosen instead of
+      porting `expat` bindings; record the choice in `docs/decisions/`.
+- [ ] 3. `vtk-io-legacy` (`VTK::IOLegacy`) — `.vtk` reader/writer. `DEPENDS: CommonCore,
+      CommonDataModel, CommonExecutionModel, IOCore, IOCellGrid, nlohmannjson`.
+- [ ] 3. `vtk-io-xml` (`VTK::IOXML`) — `.vtp`/`.vtu`/etc. `DEPENDS: CommonCore,
+      CommonExecutionModel, IOXMLParser` (+ private `CommonDataModel`, `CommonMisc`,
+      `CommonSystem`, `IOCore`).
+
+**Open scope question — `IOCellGrid`.** `IOLegacy` depends on it, and it brings an entire
+additional data model (`vtkCellGrid`) that Phase 1 does not port. Decide before starting Phase 2:
+port `vtkCellGrid` too, or carve the cell-grid paths out of the legacy reader/writer and accept
+a documented gap against upstream. Record the call in `docs/decisions/`.
+
+IO is deliberately ahead of filters: its tests are self-verifying round-trips (write, read back,
+compare) with no rendering or external baseline needed. That rationale holds for a *subset*, not
+for the module as a whole — `IO/Legacy/vtk.module` has `TEST_DEPENDS` on `FiltersAMR`,
+`FiltersGeometry`, `ImagingCore`, `InteractionStyle`, `RenderingOpenGL2`, and the test executable
+is built with `RENDERING_FACTORY`. In `IO/Legacy/Testing/Cxx/CMakeLists.txt`, 5 of 11 tests are
+flagged `,NO_DATA,NO_VALID` and are genuinely self-contained; those are the Phase 2 net. Triage
+per test, not per module.
 
 **Exit criteria**: round-trip tests pass against files produced by *real* upstream VTK (not
 just self-produced files) — use the reference tree's build or a system VTK install to generate
-fixtures once, check the fixtures into `rust/crates/vtk-io-*/tests/fixtures/`.
+fixtures once, check the fixtures into `rust/crates/vtk-io-*/tests/fixtures/`. Building that
+upstream VTK is itself unscheduled work; see Phase 0.
 
 ## Phase 3 — `Filters` (Core, General, Sources, Geometry)
 
-1. `vtk-filters-core` (`VTK::FiltersCore`) — depends on `CommonCore/DataModel/ExecutionModel/Misc`.
-2. `vtk-filters-general`, `vtk-filters-sources`, `vtk-filters-geometry`.
+Four `Common*`/`Filters*` modules that no earlier phase schedules are prerequisites here. They
+are private deps, so they do not show up in a naive read of the public dependency graph:
+
+- [ ] 0. `vtk-common-cache` (`VTK::CommonCache`) — private dep of `FiltersCore` and
+      `FiltersGeneral`.
+- [ ] 0. `vtk-common-computational-geometry` (`VTK::CommonComputationalGeometry`) — private dep
+      of `FiltersGeneral` and `FiltersSources`.
+- [ ] 0. `vtk-filters-reduction` (`VTK::FiltersReduction`) — private dep of `FiltersCore`.
+- [ ] 0. `vtk-filters-verdict` (`VTK::FiltersVerdict`) — private dep of `FiltersGeneral`
+      (mesh-quality metrics; wraps the `verdict` third-party library upstream).
+
+Then:
+
+- [ ] 1. `vtk-filters-core` (`VTK::FiltersCore`) — `DEPENDS: CommonCore, CommonDataModel,
+      CommonExecutionModel, CommonMisc` (+ private `CommonCache`, `CommonMath`, `CommonSystem`,
+      `CommonTransforms`, `FiltersReduction`).
+- [ ] 2. `vtk-filters-geometry` (`VTK::FiltersGeometry`) — `DEPENDS: CommonCore,
+      CommonDataModel, CommonExecutionModel` (+ private `FiltersCore`).
+- [ ] 2. `vtk-filters-general` (`VTK::FiltersGeneral`) — `DEPENDS: CommonCore, CommonDataModel,
+      CommonExecutionModel, CommonMisc, FiltersCore` (+ private `CommonCache`,
+      `CommonComputationalGeometry`, `CommonMath`, `CommonSystem`, `CommonTransforms`,
+      `FiltersGeometry`, `FiltersVerdict`).
+- [ ] 3. `vtk-filters-sources` (`VTK::FiltersSources`) — `DEPENDS: CommonDataModel,
+      CommonExecutionModel` (+ private `CommonComputationalGeometry`, `CommonCore`,
+      `CommonTransforms`, `FiltersCore`, `FiltersGeneral`).
 
 These are the first algorithms (clip, decimate, contour, geometry extraction). Pipeline
 execution model from Phase 1 gets exercised for real here.
+
+Note `FiltersSources` lands *after* `FiltersGeneral`, not alongside it: it privately depends on
+both `FiltersCore` and `FiltersGeneral`.
 
 **Exit criteria**: category-1 tests pass; category-2 tests that only need `Common*`+`IO*`
 fixtures (no image baseline) pass.
@@ -95,7 +176,7 @@ fixtures (no image baseline) pass.
 
 ## Phase 5 — Interaction / Widgets
 
-`vtk-interaction-style` — camera/trackball interactors. Depends on Phase 4.
+- [ ] `vtk-interaction-style` — camera/trackball interactors. Depends on Phase 4.
 
 ## Phase 6+ — Long tail
 
@@ -105,6 +186,15 @@ roadmap intentionally stops sequencing here.
 
 ## Open questions
 
+- **Which upstream version is actually vendored here** — blocking, owner's call.
+  `AGENTS.md` and this file say `v9.6.2`, but `CMake/vtkVersion.cmake` reads
+  `VTK_MAJOR_VERSION 9` / `VTK_MINOR_VERSION 7` / `VTK_BUILD_VERSION 20260806` — a dated build
+  version is a development snapshot, not a release. There are no tags in the repository
+  (`git describe --tags` finds none), and the last upstream commit carries the same date. So the
+  root tree is a 9.7-dev snapshot, which also contradicts the stated rationale for the pin
+  ("`v9.7.0` was still in `rc` at pinning time"). Either re-pin to a real `v9.6.2` tag or rewrite
+  the docs to describe a dated snapshot — until then, "pinned reference" is not a property this
+  repo has, and the Snapshot counts above cannot be recounted meaningfully.
 - **Rendering backend**: `wgpu` assumed above; not yet formally decided. Record the decision
   once made.
 - **FFI reference-testing**: worth keeping a `cxx`-based bridge to a real VTK build (system
@@ -119,18 +209,18 @@ roadmap intentionally stops sequencing here.
 
 ## On "port the tests first" as a methodology (see `AGENTS.md` § Testing strategy)
 
-Works well, with caveats, confirmed against the actual test suite rather than assumed:
+Works well, with caveats:
 
-- It's a strong fit for the 73-ish `NO_DATA NO_VALID NO_OUTPUT` test directories — genuine
-  unit tests of data structures and math, no framework mismatch (VTK's
-  `int Test(int, char*[])` -> error count maps 1:1 onto `#[test]` + `assert!`). This is real
-  red/green TDD, not aspirational.
+- It's a strong fit for the pure-logic tests — genuine unit tests of data structures and math,
+  no framework mismatch (VTK's `int Test(int, char*[])` -> error count maps 1:1 onto `#[test]` +
+  `assert!`). This is real red/green TDD, not aspirational. There are far more of them than the
+  original "73 directories" figure implied; see **Sizing caveat** in the Snapshot.
 - For IO and filter tests it's better described as **characterization/acceptance testing**
   than strict TDD: these are integration-shaped (build a small pipeline, run it, check the
   result), and porting them *before* the module exists mostly means writing them
   `#[ignore]`d as a spec, then implementing to satisfy them — still valuable, just not
   tiny-increment TDD.
-- Image-comparison tests (173 `DATA{...}` sites) are the real exception: don't port them as-is
+- Image-comparison tests (`DATA{...}` sites) are the real exception: don't port them as-is
   before a renderer exists, and even then prefer converting pixel-diffs to data/geometry
   assertions where the test's actual intent allows it.
 - The one addition beyond "just port the tests": keep `docs/test-mapping.csv` as a traceability
