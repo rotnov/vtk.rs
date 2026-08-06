@@ -60,7 +60,12 @@ needed.
       force pushes. **Blocked on the owner** — this is a GitHub repo setting needing their
       token, not something an agent can commit.
 - [ ] `docs/test-mapping.csv` schema + a small script/xtask to summarize coverage
-      (ported/passing/deferred counts per module).
+      (ported/passing/deferred counts per module), plus `cargo xtask ledger-verify` (every
+      `original_path` still exists in the reference tree) wired into CI as a required check —
+      see `docs/decisions/0003-upstream-sync-strategy.md`.
+- [ ] `cargo xtask upstream-diff <old-tag> <new-tag>` — bucket the upstream diff by module into
+      tests added / removed / changed and sources changed in ported modules. Not needed until the
+      first version bump, but it is what makes that bump reviewable rather than opaque.
 - [ ] Decide and record (in `docs/decisions/`) the numeric-array storage strategy for
       `vtk-common-core` (this determines a lot downstream): enum-of-typed-`Vec` vs generic
       struct, and how `vtkDataArray`'s runtime type dispatch (`vtkTemplateMacro`) maps to Rust.
