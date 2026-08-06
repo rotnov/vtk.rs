@@ -51,6 +51,40 @@ require their own ADR naming the file and the reason. There are none today.
 - If region coverage is later wanted as a gate, it needs a threshold below 100% and a superseding
   ADR. Do not silently raise or lower these numbers.
 
+## How this survives the TDD workflow
+
+*Amended 2026-08-06. Clarification, not a reversal — the metric above is unchanged.*
+
+A hard gate and a test-first workflow are usually assumed to fight. They don't here, and the
+reason is worth stating: 100% coverage is normally unreachable because code gets written ahead of
+its tests and accumulates branches nothing calls. Under port-tests-first that code never exists,
+so the gate is a ratchet holding a property the workflow already produces, not a target to chase.
+
+The red phase never reaches CI. `cargo test` fails locally while the implementation is missing;
+what gets pushed is green, and the gate is a required check on merge, so a draft PR may sit red
+for as long as it takes.
+
+Three things do break the gate for reasons unrelated to real coverage. All three are handled by
+convention, not by exclusions:
+
+1. **`#[ignore]`d spec tests.** `AGENTS.md` § Testing strategy has category-2 tests ported as
+   specs before the module exists. An ignored test body never executes, so its lines count as
+   uncovered. **Deferred and `#[ignore]`d specs live in `tests/`**, which `cargo-llvm-cov`
+   excludes from the report by default (alongside `examples/` and `benches/`). Unit tests that
+   run live in `#[cfg(test)]` modules under `src/`. A spec moving from `tests/` into the covered
+   set, un-ignored, is exactly the event that marks its module implemented.
+
+2. **Boilerplate no test touches** — `#[derive(Debug)]`, `impl Display`, error-enum variants
+   never constructed. These are uncovered lines and the gate is right to fail on them: an error
+   variant no test constructs is an error variant no test proves you can produce. Exercise the
+   derive, construct the variant. Do not reach for an exclusion; that is what hollows a coverage
+   gate out until it reports green over nothing.
+
+3. **An empty crate scores 100%.** The gate cannot tell "everything is covered" from "there is
+   nothing here", so on its own it would bless a skeleton. `docs/test-mapping.csv` is the second
+   signal: coverage says the code that exists is exercised, the ledger says how much of VTK's
+   suite that code answers for. Neither is meaningful alone. Progress claims cite both.
+
 ## Alternatives rejected
 
 - **Gate regions at 100%** — not reachable, for the reasons above.
