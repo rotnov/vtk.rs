@@ -24,8 +24,14 @@ needed.
 
 ## Phase 0 — Bootstrap
 
-- [ ] `rust/` Cargo workspace skeleton, empty crates for Phase 1 modules, CI (`cargo test`,
-      `cargo clippy`, `cargo fmt --check`).
+- [ ] `rust/` Cargo workspace skeleton, empty crates for Phase 1 modules, CI in
+      `.github/workflows/` running the required checks from `AGENTS.md` § Change workflow:
+      `cargo test`, `cargo clippy -D warnings`, `cargo fmt --check`, and the coverage gate
+      (`cargo llvm-cov --fail-under-lines 100 --fail-under-functions 100`, see
+      `docs/decisions/0001-test-coverage-metric.md`).
+- [ ] Protect `master` on `rotnov/vtk.rs`: PR required, required status checks, no direct or
+      force pushes. **Blocked on the owner** — this is a GitHub repo setting needing their
+      token, not something an agent can commit.
 - [ ] `docs/test-mapping.csv` schema + a small script/xtask to summarize coverage
       (ported/passing/deferred counts per module).
 - [ ] Decide and record (in `docs/decisions/`) the numeric-array storage strategy for
