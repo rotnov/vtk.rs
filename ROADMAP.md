@@ -8,31 +8,41 @@ the module pass; see `AGENTS.md` for test categories)
 - 278 modules total (`vtk.module` files), organized under `Common`, `Filters`, `IO`,
   `Rendering`, `Interaction`, `Imaging`, `Charts`, `Views`, `Domains`, `Parallel`, `Geovis`,
   `Infovis`, `Accelerators`, `Web`, `Wrapping`, `GUISupport`.
-- 270 `Testing/` directories, 2388 C++ test files, 921 Python test files.
+- 229 directories named `Testing/`; 2388 C++ test files under `Testing/Cxx/`; 921 Python test
+  files under `Testing/Python/`.
 - 173 `DATA{...}` (ExternalData baseline) references repo-wide — mostly `Rendering*`, some
   `Filters*`/`IO*`. Deferred per module until the relevant phase.
 - Module order below follows each module's `DEPENDS` in its `vtk.module` file, read per module
   and quoted inline in each phase so it can be re-checked without redoing the work.
 
-**These counts are unverified.** None of them reproduces against the tree currently in this
-repository under any counting variant tried. That is entangled with an open question about which
-upstream version this repo actually contains (see **Open questions**) — most of the deltas are
-undercounts, consistent with the figures having been taken from an older tree. Do not build
-estimates on them until the version question is settled and they are recounted.
+Counts verified against the `v9.6.2` tag now actually vendored here. They are sensitive to how
+you count, so the commands are part of the claim:
 
-**Sizing caveat: pure-logic tests are counted wrong.** `vtk_add_test_cxx` accepts its flags in
-two forms, and only one of them was ever measured:
+```sh
+find . -name vtk.module -not -path './.git/*' | wc -l                    # 278
+find . -type d -name Testing -not -path './.git/*' | wc -l               # 229
+find . -path '*/Testing/Cxx/*' -name '*.cxx' -not -path './.git/*' | wc -l    # 2388
+find . -path '*/Testing/Python/*' -name '*.py' -not -path './.git/*' | wc -l  # 921
+grep -ro 'DATA{' --include=CMakeLists.txt . | wc -l                      # 173
+```
+
+Re-run them after any change to the pinned upstream version; the figures are not portable across
+versions.
+
+**Sizing caveat: pure-logic tests cannot be counted by grep.** `vtk_add_test_cxx` accepts its
+flags in two forms, and an earlier version of this file measured only one:
 
 - *block-level*, applying to a whole list — `vtk_add_test_cxx(tgt tests` / `NO_DATA NO_VALID
   NO_OUTPUT` / `<many tests>)`;
 - *per-test*, comma-separated — `TestFoo.cxx,NO_DATA,NO_VALID`.
 
-Grepping the first form counts **lines, not directories, and not tests**. One hit covers a whole
-block: `Common/Core/Testing/Cxx/CMakeLists.txt` registers ~95 tests under a single such block,
-`Common/DataModel/Testing/Cxx` roughly 133. The per-test comma form is invisible to that grep
-entirely despite being widespread. So the earlier "73 directories" figure understated Phase 1 by
-about an order of magnitude. Classify by reading each `CMakeLists.txt` and handling both forms —
-see `AGENTS.md` § Testing strategy.
+Grepping the first form counts **lines, not directories, and not tests** — in `v9.6.2` it hits 70
+times across 67 directories, which an earlier version of this file reported as "73 of 270
+directories". Worse, one hit covers a whole block: `Common/Core/Testing/Cxx/CMakeLists.txt`
+registers ~95 tests under a single such block, `Common/DataModel/Testing/Cxx` roughly 133. The
+per-test comma form is invisible to that grep entirely despite being widespread. So the figure
+understated Phase 1 by about an order of magnitude. Classify by reading each `CMakeLists.txt` and
+handling both forms — see `AGENTS.md` § Testing strategy.
 
 Most of VTK's 278 modules are long-tail format/domain support (CGNS, ADIOS2, USD, OpenVR,
 MySQL/ODBC/PostgreSQL readers, ...). This roadmap only sequences the core that everything else
@@ -187,15 +197,6 @@ roadmap intentionally stops sequencing here.
 
 ## Open questions
 
-- **Which upstream version is actually vendored here** — blocking, owner's call.
-  `AGENTS.md` and this file say `v9.6.2`, but `CMake/vtkVersion.cmake` reads
-  `VTK_MAJOR_VERSION 9` / `VTK_MINOR_VERSION 7` / `VTK_BUILD_VERSION 20260806` — a dated build
-  version is a development snapshot, not a release. There are no tags in the repository
-  (`git describe --tags` finds none), and the last upstream commit carries the same date. So the
-  root tree is a 9.7-dev snapshot, which also contradicts the stated rationale for the pin
-  ("`v9.7.0` was still in `rc` at pinning time"). Either re-pin to a real `v9.6.2` tag or rewrite
-  the docs to describe a dated snapshot — until then, "pinned reference" is not a property this
-  repo has, and the Snapshot counts above cannot be recounted meaningfully.
 - **Rendering backend**: `wgpu` assumed above; not yet formally decided. Record the decision
   once made.
 - **FFI reference-testing**: worth keeping a `cxx`-based bridge to a real VTK build (system

@@ -181,10 +181,23 @@ rules.
 
 ## Upstream version
 
-Pinned at `v9.6.2` (latest stable tag as of 2026-08; `v9.7.0` was still in `rc` at pinning
-time). Do not silently move to a newer tag — bumping the pinned version is a deliberate
-decision that invalidates parts of the test-mapping and should be recorded in
-`docs/decisions/`.
+Pinned at `v9.6.2` — the latest stable tag as of 2026-08. `v9.7.0` exists only as `rc0`..`rc4`
+upstream, so 9.6.2 is the newest release.
+
+**Verify the pin, don't trust this paragraph.** It has been wrong before: the tree once carried a
+9.7 development snapshot while every document claimed `v9.6.2`, which quietly invalidated the
+reference-tree counts and made "diff against upstream" meaningless.
+
+```sh
+grep -E 'set\(VTK_(MAJOR|MINOR|BUILD)_VERSION' CMake/vtkVersion.cmake   # 9 / 6 / 2
+git merge-base --is-ancestor v9.6.2 HEAD && echo "v9.6.2 is in history"
+git diff --name-only v9.6.2 HEAD    # only our writable files should appear
+```
+
+A dated `VTK_BUILD_VERSION` (e.g. `20260806`) means a development snapshot, not a release.
+
+Do not silently move to a newer tag. Bumping it invalidates parts of `docs/test-mapping.csv` and
+every count in `ROADMAP.md` § Snapshot, and must be recorded in `docs/decisions/`.
 
 ## Rust workspace conventions
 
