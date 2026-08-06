@@ -219,25 +219,42 @@ VTK's tests are plain functions, `int TestName(int, char*[])`, run by CTest, ret
 count (`0` = pass). That maps directly onto Rust `#[test]` + `assert!`/`assert_eq!` with no
 framework impedance mismatch — this is what makes porting tests first tractable.
 
-Reference-tree stats (v9.6.2, for calibration): 278 modules, 270 `Testing/` directories, 2388
-C++ test files, 921 Python test files. Not all of these are the same *kind* of test — triage
-before porting:
+The reference tree holds thousands of C++ and Python test files. `ROADMAP.md` § Snapshot carries
+per-category counts, currently flagged unverified — don't plan against those numbers until the
+upstream-version question there is settled. Not all tests are the same *kind* — triage before
+porting:
 
-1. **Pure-logic tests** — registered with `NO_DATA NO_VALID NO_OUTPUT` in the module's
-   `Testing/Cxx/CMakeLists.txt` (73 of 270 Testing dirs use this combination). No external data,
-   no baseline image, no rendering. Example: `Common/DataModel/Testing/Cxx/TestColor.cxx`.
+1. **Pure-logic tests** — no external data, no baseline image, no rendering. Example:
+   `Common/DataModel/Testing/Cxx/TestColor.cxx`.
    **Port these first, verbatim, one `#[test]` per original test function.** Keep a comment
    pointing back to the source file. This is the real "write the test, then make it pass" loop.
 
-2. **Data / round-trip tests** — e.g. everything under `IO/Legacy/Testing/Cxx` and
-   `IO/XML/Testing/Cxx`: write a file, read it back, assert equality. Self-verifying, no
-   external baseline needed beyond what the test generates itself. Port these once the
-   relevant data model + I/O module exists; they're the acceptance criteria for that module,
-   not a unit-by-unit TDD loop.
+   Identify them by reading the module's `Testing/Cxx/CMakeLists.txt`. `vtk_add_test_cxx` takes
+   these flags in **two** forms and you must handle both — grepping for one of them is how the
+   earlier version of this file undercounted Phase 1 by roughly an order of magnitude:
+
+   - *block-level*, applying to every test in the list that follows:
+     `vtk_add_test_cxx(tgt tests` / `NO_DATA NO_VALID NO_OUTPUT` / `<many tests>)`. A single
+     occurrence can cover a hundred tests — `Common/Core/Testing/Cxx` registers ~95 this way.
+   - *per-test*, comma-separated on the entry itself: `TestFoo.cxx,NO_DATA,NO_VALID`. Widespread,
+     and invisible to a grep for the block form.
+
+   A file can use several blocks with different flags; read the whole file, don't sample it.
+
+2. **Data / round-trip tests** — e.g. under `IO/Legacy/Testing/Cxx` and `IO/XML/Testing/Cxx`:
+   write a file, read it back, assert equality. Self-verifying, no external baseline needed
+   beyond what the test generates itself. Port these once the relevant data model + I/O module
+   exists; they're the acceptance criteria for that module, not a unit-by-unit TDD loop.
+
+   Classify per test, never per module. `TEST_DEPENDS` in `vtk.module` is the union over the
+   whole test executable, so it looks far heavier than any individual test is — `IO/Legacy`
+   declares `RenderingOpenGL2` and `FiltersAMR` and builds with `RENDERING_FACTORY`, yet 5 of its
+   11 tests are flagged `,NO_DATA,NO_VALID` and stand alone. Taking a module's test list
+   wholesale, in either direction, gets this wrong.
 
 3. **External-data / image-comparison tests** — reference an `ExternalData` baseline via
-   `DATA{...}` in `CMakeLists.txt` (173 occurrences repo-wide, concentrated in `Rendering*` and
-   some `Filters*`/`IO*` modules). These need either a fetched baseline image+pixel-diff
+   `DATA{...}` in `CMakeLists.txt`, concentrated in `Rendering*` and some `Filters*`/`IO*`
+   modules. These need either a fetched baseline image+pixel-diff
    (meaningless before a renderer exists) or a numeric/data baseline. Don't port these until
    the corresponding phase (rendering, or the specific filter) is reached. Where the test's
    *intent* is really "does this filter produce the right mesh" rather than "does this pixel
@@ -247,7 +264,9 @@ before porting:
 Workflow per module:
 
 1. Read the module's `vtk.module` (deps) and `Testing/Cxx/CMakeLists.txt` (test list + flags)
-   in the reference tree.
+   in the reference tree. Read both files whole. Take `DEPENDS` *and* `PRIVATE_DEPENDS` — private
+   deps are real build dependencies and are how `ROADMAP.md` came to omit four prerequisite
+   modules from Phase 3.
 2. Classify every test into one of the three buckets above; record it in
    `docs/test-mapping.csv` (`original_path,rust_path,category,status`).
 3. Port category-1 tests first as failing `#[test]`s (red).
@@ -256,7 +275,7 @@ Workflow per module:
    complete, or expose gaps category-1 tests missed.
 6. Category-3 tests stay `status=deferred` in the mapping file until their phase.
 
-Don't try to port all 2388+921 tests up front — triage and port per-module, in the order
+Don't try to port thousands of tests up front — triage and port per-module, in the order
 `ROADMAP.md` defines.
 
 ## Commands
