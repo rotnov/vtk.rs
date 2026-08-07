@@ -1,5 +1,10 @@
 # Wire `cargo check --target wasm32-unknown-unknown` for `Common*` Crates Implementation Plan
 
+> **Status: implemented on branch `36-wasm-check-common`, closes**
+> [**#36**](https://github.com/rotnov/vtk.rs/issues/36). The step-level checkboxes below were never
+> ticked during execution (the SDD ledger tracked task-level completion instead) — they are left
+> as originally written for reference; do not read the unchecked boxes as unstarted work.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Close the tracked gap in `ROADMAP.md` § Phase 0: add a `cargo-check-wasm32` CI job that
