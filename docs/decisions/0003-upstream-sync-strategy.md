@@ -136,3 +136,5 @@ cost.
 - **Vendor upstream as a git submodule instead of a merged tree.** Would make bumps trivial, but
   breaks the property this repo is built on: reading VTK sources and our port side by side in one
   checkout, with `git diff` between them meaningful.
+
+<!-- смоук-тест: нелатинские символы -->
