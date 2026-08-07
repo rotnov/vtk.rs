@@ -423,7 +423,11 @@ tasks above are merged to this plan's branch, using a disposable branch that is 
    Each push starts a new CI run on the open PR; wait for that run to finish, read its three job
    results, then revert the break in a follow-up commit before pushing the next break — so each
    run is judged on its own, not conflated with the others:
-   - Commit A: add `#[test] fn smoke_fails() { assert!(false); }` to any crate's `src/lib.rs`.
+   - Commit A: add `#[test] fn smoke_fails() { assert_eq!(1, 2); }` to any crate's `src/lib.rs`.
+     Do not use `assert!(false)` — verified empirically (2026-08-07) that it also fails
+     `cargo-clippy` (`clippy::assertions_on_constants` fires on a literal-boolean `assert!` and is
+     denied under `-D warnings`), so it does not isolate `cargo-test` alone. `assert_eq!(1, 2)` is
+     a runtime comparison, not a constant-literal assertion, and was verified clean under clippy.
      Push. Confirm this run shows `cargo-test` red and `cargo-clippy`/`cargo-fmt` green. Revert,
      push the revert.
    - Commit B: add `use std::collections::HashMap;` to any crate's `src/lib.rs` and never
