@@ -1,0 +1,2 @@
+# Agent-tooling local runtime state (not shared project config).
+*.local.md

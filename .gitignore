@@ -12,6 +12,3 @@ __pycache__/
 
 # Exclude macOS .DS_Store files.
 .DS_Store
-
-# Exclude agent-tooling local runtime state (not shared project config).
-.claude/*.local.md
