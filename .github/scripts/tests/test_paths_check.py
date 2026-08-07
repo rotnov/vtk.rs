@@ -50,3 +50,79 @@ def test_find_violations_returns_only_disallowed_paths():
 
 def test_find_violations_empty_when_all_writable():
     assert find_violations(["docs/x.md", "AGENTS.md"]) == []
+
+
+import subprocess
+
+from paths_check import get_changed_files, main
+
+
+def _git(*args, cwd):
+    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True)
+
+
+def _rev_parse(ref, cwd):
+    return subprocess.run(
+        ["git", "rev-parse", ref], cwd=cwd, check=True, capture_output=True, text=True
+    ).stdout.strip()
+
+
+def _make_repo_with_one_upstream_touch(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git("init", "-q", cwd=repo)
+    _git("config", "user.email", "test@example.com", cwd=repo)
+    _git("config", "user.name", "Test", cwd=repo)
+    (repo / "AGENTS.md").write_text("v1\n")
+    _git("add", "AGENTS.md", cwd=repo)
+    _git("commit", "-q", "-m", "base", cwd=repo)
+    base = _rev_parse("HEAD", cwd=repo)
+
+    (repo / "Common").mkdir()
+    (repo / "Common" / "vtkObject.cxx").write_text("// upstream\n")
+    (repo / "docs").mkdir()
+    (repo / "docs" / "note.md").write_text("note\n")
+    _git("add", "-A", cwd=repo)
+    _git("commit", "-q", "-m", "touch upstream and docs", cwd=repo)
+    head = _rev_parse("HEAD", cwd=repo)
+    return repo, base, head
+
+
+def test_get_changed_files_reads_a_real_diff(tmp_path):
+    repo, base, head = _make_repo_with_one_upstream_touch(tmp_path)
+    changed = get_changed_files(base, head, cwd=repo)
+    assert sorted(changed) == ["Common/vtkObject.cxx", "docs/note.md"]
+
+
+def test_main_fails_on_violation(tmp_path, capsys):
+    repo, base, head = _make_repo_with_one_upstream_touch(tmp_path)
+    exit_code = main(["paths_check.py", base, head, "false"], cwd=repo)
+    assert exit_code == 1
+    assert "Common/vtkObject.cxx" in capsys.readouterr().out
+
+
+def test_main_passes_when_all_writable(tmp_path, capsys):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git("init", "-q", cwd=repo)
+    _git("config", "user.email", "test@example.com", cwd=repo)
+    _git("config", "user.name", "Test", cwd=repo)
+    (repo / "AGENTS.md").write_text("v1\n")
+    _git("add", "AGENTS.md", cwd=repo)
+    _git("commit", "-q", "-m", "base", cwd=repo)
+    base = _rev_parse("HEAD", cwd=repo)
+    (repo / "docs").mkdir()
+    (repo / "docs" / "note.md").write_text("note\n")
+    _git("add", "-A", cwd=repo)
+    _git("commit", "-q", "-m", "docs only", cwd=repo)
+    head = _rev_parse("HEAD", cwd=repo)
+
+    exit_code = main(["paths_check.py", base, head, "false"], cwd=repo)
+    assert exit_code == 0
+
+
+def test_main_skips_when_upstream_sync_label_present(tmp_path, capsys):
+    repo, base, head = _make_repo_with_one_upstream_touch(tmp_path)
+    exit_code = main(["paths_check.py", base, head, "true"], cwd=repo)
+    assert exit_code == 0
+    assert "skipped" in capsys.readouterr().out
