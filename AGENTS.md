@@ -575,9 +575,18 @@ answering it.
 
 ## Commands
 
-Not yet bootstrapped — first agent to touch `rust/` should set up the Cargo workspace and
-replace this section with real `cargo build` / `cargo test` / `cargo xtask test-mapping-report`
-commands.
+All commands run from `rust/`.
+
+```bash
+cargo build --workspace
+cargo test --workspace --all-features
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo fmt --all --check
+```
+
+`cargo xtask` commands (`ledger-check`, `test-mapping-report`, `upstream-diff`) don't exist yet —
+they are dependency-order Step 3, see `docs/superpowers/specs/2026-08-06-autonomous-operation-design.md`
+§ Dependency order.
 
 ## Do / Don't
 

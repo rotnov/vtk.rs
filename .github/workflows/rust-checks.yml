@@ -1,0 +1,52 @@
+name: rust-checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    branches: [master]
+
+jobs:
+  cargo-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: cargo test
+        working-directory: rust
+        run: cargo test --workspace --all-features
+
+  cargo-clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: cargo clippy
+        working-directory: rust
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+  cargo-fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: cargo fmt --check
+        working-directory: rust
+        run: cargo fmt --all --check
