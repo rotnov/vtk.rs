@@ -78,10 +78,11 @@ CI work) that new Python tooling in this repo goes through `uv`, not raw `pip`/`
 retroactively rewriting what already existed. This generator is new, so it uses `uv`: dependencies
 (just `pytest`, for the unit test — the generator itself uses only the standard library) declared
 as PEP 723 inline script metadata at the top of `generate_dashboard.py`, so `uv run
-generate_dashboard.py` and `uv run test_generate_dashboard.py` (the test file is standalone-runnable,
-declaring its own `pytest` dependency and invoking `pytest.main()` itself — not run via `uv run
-pytest ...`) both resolve and pin dependencies with no separate `pyproject.toml` or lockfile to keep
-in sync — matching this
+.github/scripts/generate_dashboard.py` and `uv run .github/scripts/tests/test_generate_dashboard.py`
+(the test file is standalone-runnable, declaring its own `pytest` dependency and invoking
+`pytest.main()` itself — not run via `uv run pytest ...`; both commands run from the repo root,
+matching how `pages.yml`'s `build` job invokes them) both resolve and pin dependencies with no
+separate `pyproject.toml` or lockfile to keep in sync — matching this
 directory's existing shape of single-file scripts with no project scaffolding. The two older
 scripts are left as they are; unifying them onto `uv` is a separate, out-of-scope cleanup if ever
 done at all.
@@ -94,7 +95,7 @@ push to master
       v
 .github/workflows/pages.yml
       |
-      |  uv run generate_dashboard.py
+      |  uv run .github/scripts/generate_dashboard.py
       v
 docs/test-mapping.csv  --(parsed)-->  compute_progress()  --(rendered)-->  .github/scripts/_site/index.html
                                                                                   |
@@ -224,7 +225,7 @@ concrete, verification bar instead:
 3. **A deliberate failure check, run locally rather than through Actions**: `pages.yml` triggers
    only on `push: branches: [master]`, so a commit on a scratch branch would never actually invoke
    it — the disposable-branch mechanism the gate convention relies on doesn't apply here. Instead,
-   run the exact commands the `build` job runs (`uv run generate_dashboard.py`, pointed at a
+   run the exact commands the `build` job runs (`uv run .github/scripts/generate_dashboard.py`, pointed at a
    temporarily-renamed or nonexistent `docs/test-mapping.csv` path) directly in a local checkout and
    confirm the process exits non-zero instead of writing a page. This is this workflow's equivalent
    of the gate convention's "prove it fails on a real violation," adapted to a publish step whose
