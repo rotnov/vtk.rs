@@ -150,9 +150,12 @@ branch (`master`).
 approvals (there is no human reviewer), no direct pushes, no force-pushes, no branch deletion,
 linear history, and `enforce_admins` on so the rules bind admins too.
 
-Required status checks are **not** configured yet — there is no CI to require, because `rust/`
-does not exist. Wire them up with the workflow (Phase 0), or the "green CI is the review" rule
-above is an honour system.
+`paths-check` and `language-check` run on every PR today (see § Required checks) but are **not**
+yet marked required in branch protection — that happens once the `rust/` workspace and
+`cargo xtask ledger-check` exist too, so every required check is added in one pass (see
+`docs/superpowers/specs/2026-08-06-autonomous-operation-design.md` § Dependency order). Until
+then, a red `paths-check` or `language-check` is a signal to fix before merging, not a gate that
+blocks the merge button.
 
 Protection is a GitHub repository setting, not a file in the tree; committing something cannot
 change it. Verify rather than assume:
@@ -163,6 +166,10 @@ gh api repos/rotnov/vtk.rs/branches/master/protection
 
 ### Required checks
 
+- `paths-check` — every changed path in the PR is inside § What is writable, or the PR carries
+  the `upstream-sync` label (`.github/scripts/paths_check.py`). Live today.
+- `language-check` — no non-English-script character in `docs/`, `rust/`, or the root meta-files
+  (`.github/scripts/check_ascii.py`). Live today.
 - `cargo test --workspace --all-features`
 - `cargo clippy --workspace --all-targets --all-features -- -D warnings`
 - `cargo fmt --all --check`
