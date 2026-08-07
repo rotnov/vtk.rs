@@ -4,6 +4,9 @@ See AGENTS.md's "What is writable" section. The allowlist here must match that s
 exactly, or the check and the doc it enforces will quietly drift.
 """
 
+import subprocess
+import sys
+
 ALLOWED_DIRS = [
     "rust/",
     "docs/",
@@ -27,10 +30,6 @@ def is_writable(path):
 
 def find_violations(changed_files):
     return [path for path in changed_files if not is_writable(path)]
-
-
-import subprocess
-import sys
 
 
 def get_changed_files(base_ref, head_ref, cwd=None):

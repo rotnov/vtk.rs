@@ -1,9 +1,10 @@
+import subprocess
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from paths_check import is_writable, find_violations
+from paths_check import is_writable, find_violations, get_changed_files, main
 
 
 def test_is_writable_allows_docs():
@@ -50,11 +51,6 @@ def test_find_violations_returns_only_disallowed_paths():
 
 def test_find_violations_empty_when_all_writable():
     assert find_violations(["docs/x.md", "AGENTS.md"]) == []
-
-
-import subprocess
-
-from paths_check import get_changed_files, main
 
 
 def _git(*args, cwd):
