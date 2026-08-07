@@ -52,10 +52,14 @@ needed.
 ## Phase 0 — Bootstrap
 
 - [ ] `rust/` Cargo workspace skeleton, empty crates for Phase 1 modules, CI in
-      `.github/workflows/` running the required checks from `AGENTS.md` § Change workflow:
-      `cargo test`, `cargo clippy -D warnings`, `cargo fmt --check`, and the coverage gate
-      (`cargo llvm-cov --fail-under-lines 100 --fail-under-functions 100`, see
-      `docs/decisions/0001-test-coverage-metric.md`).
+      `.github/workflows/` running `cargo test`, `cargo clippy -D warnings`, and
+      `cargo fmt --check` from `AGENTS.md` § Change workflow.
+- [ ] Coverage gate (`cargo llvm-cov --fail-under-lines 100 --fail-under-functions 100`) wired
+      into CI. Not part of the workspace-skeleton bullet above: an entire workspace with zero
+      executing tests makes the tool hard-error rather than report 100%, verified empirically —
+      see `docs/decisions/0001-test-coverage-metric.md`'s 2026-08-07 amendment and
+      `docs/lessons/0010-adr-tool-claim-never-run.md`. Wire this job in the same PR as Phase 1's
+      first crate with an actually-executing test, not before.
 - [x] Protect `master` on `rotnov/vtk.rs` — done: PR required, 0 approvals, no direct or force
       pushes, no deletion, linear history, `enforce_admins` on.
 - [ ] Add the required status checks to that protection once CI exists. Until then "green CI is

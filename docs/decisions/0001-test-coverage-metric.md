@@ -80,10 +80,10 @@ convention, not by exclusions:
    derive, construct the variant. Do not reach for an exclusion; that is what hollows a coverage
    gate out until it reports green over nothing.
 
-3. **An empty crate scores 100%.** The gate cannot tell "everything is covered" from "there is
-   nothing here", so on its own it would bless a skeleton. `docs/test-mapping.csv` is the second
-   signal: coverage says the code that exists is exercised, the ledger says how much of VTK's
-   suite that code answers for. Neither is meaningful alone. Progress claims cite both.
+3. **An empty crate scores 100% — corrected 2026-08-07, see amendment below.** This is true only
+   once at least one crate in the workspace has an executing test; an entire workspace with zero
+   executing tests anywhere does not score 100%, it hard-errors. See the amendment for the
+   verified behavior and what it means for wiring the coverage job.
 
 ## Alternatives rejected
 
@@ -92,3 +92,41 @@ convention, not by exclusions:
   a single crate exists. Revisit once Phase 1 has real code.
 - **Gate lines only** — a module can hold a never-called public function whose body is covered
   through another path; the function gate closes that.
+
+## Amendment: item 3 was never run
+
+*Amended 2026-08-07. Corrects a factual claim; the metric decided above is unchanged.*
+
+Item 3 above ("an empty crate scores 100%") was reasoning about how `cargo llvm-cov` ought to
+behave, not a command actually run. Verified by dry-running the exact state
+`docs/superpowers/specs/2026-08-06-autonomous-operation-design.md`'s dependency-order Step 2
+produces — a 7-crate workspace, every `src/lib.rs` a doc comment only, zero `#[test]`s anywhere:
+
+```
+$ cargo llvm-cov --workspace --all-features --fail-under-lines 100 --fail-under-functions 100
+error: failed to load coverage: '...': no coverage data found
+error: failed to generate report: process didn't exit successfully: `.../llvm-cov report ...` (exit status: 1)
+```
+
+Adding one executing test anywhere in the workspace (a single `#[test]` in one crate) made the
+identical command pass at 100%/100%/100%. The claim holds once *any* crate has an executing test —
+crates with no code simply don't appear as rows in the per-file table — but not when *no* crate
+does. Zero executed tests means zero `.profraw` instrumentation data exists to merge or report on;
+the tool errors before any `--fail-under-*` threshold is evaluated. No flag changes this (checked
+`--fail-under-*`, `--fail-uncovered-*`, `--no-report`, `--failure-mode`).
+
+This has a second consequence beyond the bootstrap skeleton: item 1 above says deferred
+`#[ignore]`d specs live under `tests/`, which `cargo-llvm-cov` excludes from the report by default.
+A module whose first ported commits are only ignored specs — no `src/` unit test yet — hits the
+same "no coverage data found" wall, not just a brand-new skeleton crate. This is a recurring state
+of the port-tests-first workflow, not a one-time quirk.
+
+**Corrected rule:** the coverage job (`cargo llvm-cov --workspace --all-features
+--fail-under-lines 100 --fail-under-functions 100`) is not wired into CI until the same PR that
+adds the first crate with an actually-executing test — a `src/` unit test, or a `tests/` spec once
+un-ignored. Dependency-order Step 2 ships the `rust/` workspace skeleton with `cargo test`,
+`cargo clippy -D warnings`, and `cargo fmt --check` as three green CI jobs; the coverage job is a
+separate, not-yet-done item, wired in Phase 1's first module PR instead. This is not an exclusion
+under this ADR's "no exclusions without an ADR" rule — no code is ever covered and later exempted;
+the job does not exist yet, the same way `cargo xtask ledger-check` does not exist before
+dependency-order Step 3 builds it. See `docs/lessons/0010-adr-tool-claim-never-run.md`.
