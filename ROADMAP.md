@@ -217,6 +217,14 @@ roadmap intentionally stops sequencing here.
   under `rust/` before the first real release (not a blocker for development).
 - **Upstream sync cadence**: pinned at `v9.6.2`. No policy yet for when/how to re-pin — revisit
   once Phase 1–2 are stable.
+- **Performance benchmarking**: no benchmark harness or perf-regression gate exists yet — nothing
+  proves the port is "at least not slower" than upstream C++. Direction: `criterion` benches per
+  crate under `benches/`, added once that crate has real code (an empty skeleton has nothing to
+  benchmark). Informational only in CI, not gated, until two prerequisites exist: the FFI
+  reference-testing oracle above (a real C++ baseline to diff against — without it "not slower"
+  has nothing to compare to) and a dedicated, non-shared runner (perf numbers on shared CI
+  runners are too noisy to gate on). Not required for Phase 0/1 bootstrap; revisit once Phase 1
+  has real code and the oracle question above is resolved.
 
 ## On "port the tests first" as a methodology (see `AGENTS.md` § Testing strategy)
 
