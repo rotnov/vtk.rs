@@ -170,13 +170,16 @@ gh api repos/rotnov/vtk.rs/branches/master/protection
   the `upstream-sync` label (`.github/scripts/paths_check.py`). Live today.
 - `language-check` — no non-English-script character in `docs/`, `rust/`, or the root meta-files
   (`.github/scripts/check_ascii.py`). Live today.
-- `cargo test --workspace --all-features`
-- `cargo clippy --workspace --all-targets --all-features -- -D warnings`
-- `cargo fmt --all --check`
-- `cargo check --target wasm32-unknown-unknown` for `Common*`/`Filters*` — see **WebAssembly**
+- `cargo test --workspace --all-features` — Live today.
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings` — Live today.
+- `cargo fmt --all --check` — Live today.
+- `cargo check --target wasm32-unknown-unknown` for `Common*`/`Filters*` — see **WebAssembly**.
+  Not yet wired even though the trigger condition (those crates existing) has fired — tracked as
+  a known gap in `ROADMAP.md` § Phase 0, not a silent omission.
 - `cargo xtask ledger-check` — the three ledger assertions (*exists*, *complete*, *fresh*); see
   **The test-mapping ledger**. Cheap, and it fails loudly the moment the ledger stops describing
-  the reference tree instead of letting it drift
+  the reference tree instead of letting it drift. Not yet wired — dependency-order Step 3, see
+  `docs/superpowers/specs/2026-08-06-autonomous-operation-design.md` § Dependency order.
 - the coverage gate, below — wired starting with Phase 1's first crate that has an actually-
   executing test, not with the bare workspace skeleton; see
   `docs/decisions/0001-test-coverage-metric.md`'s amendment

@@ -1,5 +1,26 @@
 # Rust Workspace Skeleton + CI (Dependency-order Step 2) Implementation Plan
 
+> **Status: implemented and smoke-tested, pending merge via PR
+> [#33](https://github.com/rotnov/vtk.rs/pull/33)** (closes
+> [#32](https://github.com/rotnov/vtk.rs/issues/32)).
+>
+> The positive-control smoke-test sequence below ran on disposable branch `smoke/rust-checks-red`,
+> throwaway PR [#34](https://github.com/rotnov/vtk.rs/pull/34) (never merged, branch deleted after
+> use). While running it, the originally-specified `cargo-test` trigger (`assert!(false)`) was
+> found to also fail `cargo-clippy` — see
+> `docs/lessons/0011-smoke-trigger-clippy-claim-never-run.md` — and was corrected to
+> `assert_eq!(1, 2)` before the run recorded below. All three runs are recorded here because the
+> disposable branch that produced them no longer exists:
+>
+> | trigger | cargo-test | cargo-clippy | cargo-fmt | CI run |
+> |---|---|---|---|---|
+> | `assert_eq!(1, 2)` in a `#[test]` | failure | success | success | [31180976476](https://github.com/rotnov/vtk.rs/actions/runs/31180976476) |
+> | unused `use std::collections::HashMap;` | success | failure | success | [31181194673](https://github.com/rotnov/vtk.rs/actions/runs/31181194673) |
+> | `pub fn x (  ) { }` | success | success | failure | [31181603385](https://github.com/rotnov/vtk.rs/actions/runs/31181603385) |
+>
+> Each run independently proves exactly one job goes red on a real violation while the other two
+> stay green. All three jobs are now proven to fire, not just to pass.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Stand up the `rust/` Cargo workspace skeleton (empty crates for every Phase 1 module)

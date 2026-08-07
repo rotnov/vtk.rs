@@ -42,5 +42,7 @@ against the real workspace (`cargo clippy` exit 0, `cargo fmt --all --check` exi
 fails as intended) before being pushed to the smoke branch and before the plan document was
 amended to match. `docs/superpowers/plans/2026-08-07-rust-workspace-ci.md`'s smoke-test section now
 states the verified trigger and records why `assert!(false)` was rejected, so a future reader does
-not need to rediscover this. Promoted directly to `enforced` (no `open`/`promoted` waiting period)
-because the fix is the plan text itself, the same reasoning `0010` used.
+not need to rediscover this. Promoted directly (no `open` waiting period) because the fix is the
+plan text itself — a corrected rule now living in a doc under `docs/`, the same reasoning `0010`
+used. Not `enforced`: no CI check makes a future plan author re-commit this exact mistake
+impossible, only less likely.
