@@ -63,7 +63,11 @@ deployment actions.
   build_type=workflow`, or the equivalent Settings UI toggle). This is a live repo-config change,
   not a file in the tree, and per the spec must happen before this plan's PR merges to `master`
   (the first `deploy-pages` run fails on this precondition otherwise). It is called out as its own
-  controller-executed step below, never bundled into an implementer task.
+  controller-executed step below, never bundled into an implementer task. This does not conflict
+  with `AGENTS.md`'s "run everything non-interactively" rule (§ Autonomous operation, line 101):
+  that rule bars a plan from *depending on* a confirmation to make forward progress; the next line
+  (103-104) carves out exactly this case — "genuinely blocked on a decision only a human can make"
+  — and a live repository-settings change is such a decision, the same way branch protection is.
 - Out of scope (per the spec's § Out of scope): every panel besides porting-progress, per-PR
   preview deploys, any client-side JS or interactivity, moving the generator into `cargo xtask`,
   unifying the two older scripts onto `uv`, historical trend / charting.
@@ -433,6 +437,8 @@ concurrency:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
 
 jobs:
   build:
@@ -457,9 +463,6 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -474,6 +477,17 @@ recommended major version tags in GitHub's own documented Pages-via-Actions flow
 `astral-sh/setup-uv`'s README — update the tags above if a newer major exists at implementation
 time. This mirrors the design spec's own explicit hedge on these version pins (§ Workflow): the
 spec is not the place that stays current with upstream Action releases, and neither is this plan.
+
+**Correction (post-review, Task 3 fix round 1):** the `permissions:` block above originally
+granted only `contents: read` at the workflow level, with `pages: write`/`id-token: write` added
+only on the `deploy` job. That's wrong: `actions/configure-pages` (used in `build`) calls the
+Pages API unconditionally and hard-fails without `pages: write` in the job that runs it. A
+top-level `permissions:` block zeroes every unlisted scope for the whole workflow — job-level
+blocks *replace*, not merge with, it — so `build` had no `pages` scope at all. Fixed by moving all
+three scopes to the workflow level and dropping the job-level override, matching GitHub's own
+canonical two-job reference (`actions/starter-workflows/main/pages/jekyll-gh-pages.yml`), which
+grants `contents: read` + `pages: write` + `id-token: write` at the workflow level with no
+per-job overrides on either job.
 
 - [ ] **Step 2: Commit**
 
@@ -520,3 +534,6 @@ push-triggered, non-gating workflow. Instead:
 4. Record the workflow run URL and the confirmed live Pages URL in this plan document, mirroring
    how `docs/superpowers/plans/2026-08-07-wasm-check-common.md` records its smoke-test run URLs,
    since this is the only record that this workflow was ever proven to work end-to-end.
+5. Check off the dashboard bullet in `ROADMAP.md`'s Phase 0 section and replace its "Pending: ..."
+   clause with the confirmed live Pages URL from step 3, matching how the other Phase 0 bullets
+   record their completion evidence inline.

@@ -78,8 +78,10 @@ CI work) that new Python tooling in this repo goes through `uv`, not raw `pip`/`
 retroactively rewriting what already existed. This generator is new, so it uses `uv`: dependencies
 (just `pytest`, for the unit test — the generator itself uses only the standard library) declared
 as PEP 723 inline script metadata at the top of `generate_dashboard.py`, so `uv run
-generate_dashboard.py` and `uv run pytest tests/test_generate_dashboard.py` both resolve and pin
-dependencies with no separate `pyproject.toml` or lockfile to keep in sync — matching this
+generate_dashboard.py` and `uv run test_generate_dashboard.py` (the test file is standalone-runnable,
+declaring its own `pytest` dependency and invoking `pytest.main()` itself — not run via `uv run
+pytest ...`) both resolve and pin dependencies with no separate `pyproject.toml` or lockfile to keep
+in sync — matching this
 directory's existing shape of single-file scripts with no project scaffolding. The two older
 scripts are left as they are; unifying them onto `uv` is a separate, out-of-scope cleanup if ever
 done at all.
@@ -164,6 +166,12 @@ Two jobs:
    against GitHub's current documented flow at implementation time rather than asserted here, since
    this spec is not the place that stays current with upstream Action releases.
 
+   **Correction (found during implementation):** `pages: write` and `id-token: write` are also
+   required in the `build` job, not just `deploy` — `build` runs `actions/configure-pages`, which
+   calls the Pages API unconditionally and hard-fails without that scope. Grant all three
+   permissions (`contents: read`, `pages: write`, `id-token: write`) at the workflow level covering
+   both jobs, per GitHub's own canonical two-job Pages reference workflow.
+
 ### One-time manual step (not part of any PR)
 
 GitHub Pages must be told to serve from Actions instead of a branch. This is a repository setting,
@@ -178,10 +186,13 @@ gh api -X POST repos/rotnov/vtk.rs/pages -f build_type=workflow
 This changes a live repository setting and is called out here explicitly so implementation asks
 before running it, the same way any repository-configuration change does — it is not bundled into
 the implementation plan's automated steps. It must happen **before** `pages.yml` first reaches
-`master`: `deploy-pages` requires the Pages source to already be set to "GitHub Actions," so if the
-workflow file merges first, the very first `build`+`deploy` run on `master` fails on that
+`master`: both `actions/configure-pages` (in `build`) and `deploy-pages` (in `deploy`) require the
+Pages source to already be set to "GitHub Actions," and `configure-pages` runs first, so if the
+workflow file merges before the flip, the very first run fails in the **`build`** job on that
 precondition rather than on anything the implementation got wrong. The implementation plan does the
-setting flip (with the owner's confirmation) as its first step, before the workflow file is added.
+setting flip (with the owner's confirmation) after `pages.yml` is authored and reviewed, but before
+that commit merges to `master` — not before the file is written, since the flip itself has nothing
+to verify against until the workflow exists.
 
 ## Error handling
 
