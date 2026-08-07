@@ -253,9 +253,11 @@ not ours to touch.)
 
 Read-only: everything else, i.e. the entire vendored VTK source tree — `Common/`, `Filters/`,
 `IO/`, `Rendering/`, `Testing/`, `CMake/`, `ThirdParty/`, and root files like `CMakeLists.txt`,
-`README.md`, `CONTRIBUTING.md`, `.gitlab-ci.yml`. It must stay byte-identical to the pinned
-upstream so it remains a trustworthy reference and diffs against future VTK releases stay
-meaningful.
+`README.md`, `CONTRIBUTING.md`, `.gitlab-ci.yml`, and the root `.gitignore`. It must stay
+byte-identical to the pinned upstream so it remains a trustworthy reference and diffs against
+future VTK releases stay meaningful. Need to ignore local-only agent state (e.g. `*.local.md`)?
+Add a nested `.gitignore` inside a writable directory (e.g. `.claude/.gitignore`) — git resolves
+per-directory ignore files, so this never touches the upstream-owned root file.
 
 Agent-facing instructions go in `AGENTS.md` only, never in `CLAUDE.md` or a harness-specific
 file — one tool-agnostic source of truth, so an agent running under any harness reads the same
