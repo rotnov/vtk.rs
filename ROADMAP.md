@@ -73,10 +73,11 @@ needed.
       pushes, no deletion, linear history, `enforce_admins` on.
 - [ ] Add the required status checks to that protection once CI exists. Until then "green CI is
       the review" is an honour system, since there is nothing to require.
-- [ ] `docs/test-mapping.csv` schema + a small script/xtask to summarize coverage
-      (ported/passing/deferred counts per module), plus `cargo xtask ledger-check` — the three
-      assertions *exists* / *complete* / *fresh* — wired into CI as a required check. See
-      `docs/decisions/0003-upstream-sync-strategy.md`.
+- [x] `docs/test-mapping.csv` schema — done, see `AGENTS.md` § The test-mapping ledger.
+- [ ] `cargo xtask ledger-check` — the four assertions *exists* / *complete* / *fresh* / *parity*
+      — wired into CI as a required check. See `docs/decisions/0003-upstream-sync-strategy.md` and
+      `docs/superpowers/specs/2026-08-06-autonomous-operation-design.md` § 4 "The parity gate
+      becomes real".
 - [ ] `cargo xtask upstream-diff <old-tag> <new-tag>` — bucket the upstream diff by module into
       tests added / removed / changed and sources changed in ported modules. Not needed until the
       first version bump, but it is what makes that bump reviewable rather than opaque.

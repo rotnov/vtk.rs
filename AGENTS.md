@@ -177,10 +177,11 @@ gh api repos/rotnov/vtk.rs/branches/master/protection
   Live today (`cargo-check-wasm32` in `.github/workflows/rust-checks.yml`). The crate list is
   explicit `-p` flags, not a wildcard — add new `Common*`/`Filters*` crates to the job when they're
   created. `IO*` crates are excluded by design, see **WebAssembly**.
-- `cargo xtask ledger-check` — the three ledger assertions (*exists*, *complete*, *fresh*); see
-  **The test-mapping ledger**. Cheap, and it fails loudly the moment the ledger stops describing
-  the reference tree instead of letting it drift. Not yet wired — dependency-order Step 3, see
-  `docs/superpowers/specs/2026-08-06-autonomous-operation-design.md` § Dependency order.
+- `cargo xtask ledger-check` — the four ledger assertions (*exists*, *complete*, *fresh*,
+  *parity*); see **The test-mapping ledger**. Cheap, and it fails loudly the moment the ledger
+  stops describing the reference tree instead of letting it drift. Not yet wired — dependency-order
+  Step 3, see `docs/superpowers/specs/2026-08-06-autonomous-operation-design.md` § Dependency
+  order.
 - the coverage gate, below — wired starting with Phase 1's first crate that has an actually-
   executing test, not with the bare workspace skeleton; see
   `docs/decisions/0001-test-coverage-metric.md`'s amendment
@@ -433,6 +434,10 @@ separate:
 - a module is only *done* when its category-1 and category-2 **ported** tests are green, per
   `docs/test-mapping.csv`.
 
+The second gate is mechanised by `cargo xtask ledger-check`'s **parity** assertion (see **What CI
+checks about the ledger** below) — without it, the split above is prose, not a check. Its absence
+is exactly what `docs/lessons/0006-new-rule-weakened-existing-one.md` recorded.
+
 Without that split, writing your own test becomes the cheap way to make coverage green, the
 parity metric dies quietly, and CI keeps reporting success over a port that no longer tracks VTK.
 If you catch yourself writing an own test to cover code you just wrote, you skipped a step: go
@@ -555,7 +560,7 @@ that parity claims stay auditable.
 
 ### What CI checks about the ledger
 
-`cargo xtask ledger-check` asserts three separate things. They are separate because each catches a
+`cargo xtask ledger-check` asserts four separate things. They are separate because each catches a
 failure the others cannot see:
 
 - **exists** — every `original_path` is present in the reference tree. Catches tests upstream
@@ -567,6 +572,13 @@ failure the others cannot see:
   in VTK from day one, and a check that is red by default gets switched off.
 - **fresh** — every row's `original_sha` matches the file's current blob. Catches upstream
   rewriting a test we already ported.
+- **parity** — every crate that contains any code has at least one ledger row with
+  `status=ported` for its module. Catches a crate reaching green CI on **own tests alone**, the
+  gap `docs/lessons/0006-new-rule-weakened-existing-one.md` recorded: permitting own tests (see
+  **Tests we write ourselves** above) let the coverage gate go green without porting anything,
+  because an own test can cover code no VTK test exercises. Coverage and parity are separate gates
+  on purpose — coverage is satisfied by *any* test, parity only by a ported one — and this
+  assertion is what makes the second gate mechanical instead of just asserted in prose.
 
 **fresh** is the one worth having even though it is the fussiest. When upstream rewrites a ported
 test, the path still exists and the row still looks right; our port keeps passing its old
