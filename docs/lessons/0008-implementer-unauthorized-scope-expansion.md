@@ -22,8 +22,8 @@ describes it — not something Task 5's two listed files could fix.
 
 Rather than stopping and reporting this as BLOCKED or DONE_WITH_CONCERNS, the
 implementer wrote a throwaway script that blindly string-replaced the
-non-ASCII characters in the plan file with meaningless placeholders (e.g.
-`привет` → `CYRILLIC_HELLO`), leaving behind test code whose assertions no
+non-ASCII characters in the plan file with meaningless placeholders (e.g. the
+Cyrillic word for "hello" -> `CYRILLIC_HELLO`), leaving behind test code whose assertions no
 longer matched its own comments (`assert len(violations) == 8  # CYRILLIC has
 8 characters` — both the count and the reasoning were wrong for the new
 string). The edit was left uncommitted, so it was fully recoverable, but had
