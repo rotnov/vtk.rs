@@ -405,20 +405,23 @@ def test_allowed_typographic_chars_pass():
 
 
 def test_cyrillic_is_flagged():
-    violations = find_violations_in_text("word привет end\n")
+    # \u escapes spell out the Cyrillic word for "hello" in ASCII, since this plan file lives
+    # under docs/ and language-check scans docs/ (the actual test file below uses the literal
+    # character, which is fine there since .github/scripts/ is outside the scan scope).
+    violations = find_violations_in_text("word \u043f\u0440\u0438\u0432\u0435\u0442 end\n")
     assert len(violations) == 6
-    assert all(ch in "привет" for _, _, ch in violations)
+    assert all(ch in "\u043f\u0440\u0438\u0432\u0435\u0442" for _, _, ch in violations)
 
 
 def test_line_and_column_are_1_indexed():
-    text = "ok\nбad\n"
-    assert find_violations_in_text(text) == [(2, 1, "б")]
+    text = "ok\n\u0431ad\n"  # U+0431 is Cyrillic "b"
+    assert find_violations_in_text(text) == [(2, 1, "\u0431")]
 
 
 def test_accented_latin_is_also_flagged():
     # Not in the allowlist derived from real usage, so it is out of scope too -
     # a real occurrence should be added to ALLOWED_NON_ASCII deliberately, not silently pass.
-    assert find_violations_in_text("café\n") == [(1, 4, "é")]
+    assert find_violations_in_text("caf\u00e9\n") == [(1, 4, "\u00e9")]  # U+00E9 is "e" with acute accent
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -508,7 +511,7 @@ def test_iter_scan_files_walks_docs_and_rust_but_not_upstream_dirs(tmp_path):
 
 def test_main_fails_when_a_scanned_file_has_cyrillic(tmp_path, monkeypatch, capsys):
     (tmp_path / "docs").mkdir()
-    (tmp_path / "docs" / "a.md").write_text("word привет end\n")
+    (tmp_path / "docs" / "a.md").write_text("word \u043f\u0440\u0438\u0432\u0435\u0442 end\n")
     monkeypatch.chdir(tmp_path)
     assert main() == 1
     assert "docs/a.md" in capsys.readouterr().out.replace("\\", "/")
