@@ -1,5 +1,12 @@
 # CI: paths-check and language-check Implementation Plan
 
+> **Status: implemented and merged.** All 7 tasks landed in [#22](https://github.com/rotnov/vtk.rs/pull/22)
+> (squash commit `964a723055`), with a follow-up docs fix in
+> [#24](https://github.com/rotnov/vtk.rs/pull/24) (squash commit `8d7745ed90`). Both checks are
+> live and required on `master`. The step-level checkboxes below were never ticked during
+> execution (the SDD ledger tracked task-level completion instead) — they are left as originally
+> written for reference; do not read the unchecked boxes as unstarted work.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Stand up the first two CI checks from the autonomy spec's dependency order —
