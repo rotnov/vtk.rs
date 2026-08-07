@@ -1,3 +1,7 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["pytest"]
+# ///
 import sys
 from pathlib import Path
 

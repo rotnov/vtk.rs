@@ -9,6 +9,12 @@ Reads docs/test-mapping.csv and renders a single self-contained HTML file to
 nothing. See docs/superpowers/specs/2026-08-07-status-dashboard-design.md.
 """
 
+import csv
+import os
+import subprocess
+from datetime import datetime, timezone
+from pathlib import Path
+
 
 def compute_progress(rows):
     total = len(rows)
@@ -54,3 +60,32 @@ def render_html(stats, commit_sha, generated_at):
 </body>
 </html>
 """
+
+
+def main():
+    csv_path = Path("docs/test-mapping.csv")
+    with csv_path.open(newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+
+    stats = compute_progress(rows)
+
+    commit_sha = os.environ.get("GITHUB_SHA")
+    if not commit_sha:
+        commit_sha = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], text=True
+        ).strip()
+
+    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
+    html = render_html(stats, commit_sha, generated_at)
+
+    out_dir = Path(".github/scripts/_site")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / "index.html"
+    out_path.write_text(html, encoding="utf-8")
+
+    print(f"generate_dashboard: wrote {out_path} ({stats})")
+
+
+if __name__ == "__main__":
+    main()
