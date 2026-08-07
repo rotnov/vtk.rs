@@ -1,0 +1,13 @@
+[package]
+name = "vtk-common-data-model"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+description = "Port of VTK::CommonDataModel."
+
+[dependencies]
+vtk-common-core = { path = "../vtk-common-core" }
+vtk-common-math = { path = "../vtk-common-math" }
+vtk-common-transforms = { path = "../vtk-common-transforms" }
+vtk-common-misc = { path = "../vtk-common-misc" }
+vtk-common-system = { path = "../vtk-common-system" }

@@ -1,0 +1,9 @@
+[package]
+name = "vtk-common-math"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+description = "Port of VTK::CommonMath."
+
+[dependencies]
+vtk-common-core = { path = "../vtk-common-core" }
