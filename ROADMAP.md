@@ -83,6 +83,12 @@ needed.
 - [ ] Decide and record (in `docs/decisions/`) the numeric-array storage strategy for
       `vtk-common-core` (this determines a lot downstream): enum-of-typed-`Vec` vs generic
       struct, and how `vtkDataArray`'s runtime type dispatch (`vtkTemplateMacro`) maps to Rust.
+- [ ] GitHub Pages status dashboard — one live stat, percent of catalogued tests with
+      `status=ported` in `docs/test-mapping.csv`, rebuilt on every push to `master` via
+      `.github/workflows/pages.yml` (generator: `.github/scripts/generate_dashboard.py`). See
+      `docs/superpowers/plans/2026-08-07-status-dashboard.md`. Pending: the Pages source-setting
+      flip (owner confirmation required) and the post-merge end-to-end verification that records
+      the live URL here.
 
 ## Phase 1 — `Common*` (no VTK-internal deps beyond this group)
 
