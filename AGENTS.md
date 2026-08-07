@@ -174,8 +174,9 @@ gh api repos/rotnov/vtk.rs/branches/master/protection
 - `cargo clippy --workspace --all-targets --all-features -- -D warnings` — Live today.
 - `cargo fmt --all --check` — Live today.
 - `cargo check --target wasm32-unknown-unknown` for `Common*`/`Filters*` — see **WebAssembly**.
-  Not yet wired even though the trigger condition (those crates existing) has fired — tracked as
-  a known gap in `ROADMAP.md` § Phase 0, not a silent omission.
+  Live today (`cargo-check-wasm32` in `.github/workflows/rust-checks.yml`). The crate list is
+  explicit `-p` flags, not a wildcard — add new `Common*`/`Filters*` crates to the job when they're
+  created. `IO*` crates are excluded by design, see **WebAssembly**.
 - `cargo xtask ledger-check` — the three ledger assertions (*exists*, *complete*, *fresh*); see
   **The test-mapping ledger**. Cheap, and it fails loudly the moment the ledger stops describing
   the reference tree instead of letting it drift. Not yet wired — dependency-order Step 3, see

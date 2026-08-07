@@ -50,3 +50,31 @@ jobs:
       - name: cargo fmt --check
         working-directory: rust
         run: cargo fmt --all --check
+
+  cargo-check-wasm32:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      # Explicit crate list, not --workspace: IO* crates are exempt from the wasm build
+      # requirement per AGENTS.md § WebAssembly, so a wildcard would silently pull them in
+      # once they're ported. Add new Common*/Filters* crates to this list when they're created.
+      - name: cargo check --target wasm32-unknown-unknown
+        working-directory: rust
+        run: |
+          cargo check --target wasm32-unknown-unknown \
+            -p vtk-common-core \
+            -p vtk-common-math \
+            -p vtk-common-system \
+            -p vtk-common-transforms \
+            -p vtk-common-misc \
+            -p vtk-common-data-model \
+            -p vtk-common-execution-model
