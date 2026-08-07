@@ -305,6 +305,12 @@ Strategy and rationale: `docs/decisions/0003-upstream-sync-strategy.md`. The pro
 
 4. **Write the ADR** for this bump: old tag, new tag, diff summary, what it cost.
 
+5. **Open the PR with the `upstream-sync` label.** The merge from step 1 touches every path in
+   the read-only upstream tree at once, which `paths-check` (`.github/scripts/paths_check.py`)
+   would otherwise flag as a violation. Apply the `upstream-sync` label to this PR — the label
+   already exists on the repo — to exempt it; never weaken the allowlist itself to get a green
+   check here.
+
 Never bump in the middle of a phase — it moves the target while modules are being ported against
 it. Bump for a reason, not on a schedule.
 
