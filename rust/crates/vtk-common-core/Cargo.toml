@@ -1,0 +1,6 @@
+[package]
+name = "vtk-common-core"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+description = "Port of VTK::CommonCore."
