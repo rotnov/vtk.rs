@@ -6,6 +6,13 @@
 > live and required on `master`. The step-level checkboxes below were never ticked during
 > execution (the SDD ledger tracked task-level completion instead) — they are left as originally
 > written for reference; do not read the unchecked boxes as unstarted work.
+>
+> Task 7 Step 5's positive-control smoke test proved `paths-check` fires red on a real violation,
+> but the plan had no equivalent step for `language-check` — it had only ever been proven to pass.
+> Closed out of band on disposable PR [#26](https://github.com/rotnov/vtk.rs/pull/26) (never
+> merged, branch deleted): a non-ASCII line added under `docs/` made `language-check` fail in
+> 20s, correctly naming the offending file, while `paths-check` passed on the same PR. Both checks
+> are now proven to fire, not just to pass.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
