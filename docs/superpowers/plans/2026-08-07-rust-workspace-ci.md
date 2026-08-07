@@ -76,7 +76,7 @@ GitHub Actions.
 
 ```toml
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
     "crates/vtk-common-core",
     "crates/vtk-common-math",
