@@ -150,9 +150,12 @@ branch (`master`).
 approvals (there is no human reviewer), no direct pushes, no force-pushes, no branch deletion,
 linear history, and `enforce_admins` on so the rules bind admins too.
 
-Required status checks are **not** configured yet — there is no CI to require, because `rust/`
-does not exist. Wire them up with the workflow (Phase 0), or the "green CI is the review" rule
-above is an honour system.
+`paths-check` and `language-check` run on every PR today (see § Required checks) but are **not**
+yet marked required in branch protection — that happens once the `rust/` workspace and
+`cargo xtask ledger-check` exist too, so every required check is added in one pass (see
+`docs/superpowers/specs/2026-08-06-autonomous-operation-design.md` § Dependency order). Until
+then, a red `paths-check` or `language-check` is a signal to fix before merging, not a gate that
+blocks the merge button.
 
 Protection is a GitHub repository setting, not a file in the tree; committing something cannot
 change it. Verify rather than assume:
@@ -163,6 +166,10 @@ gh api repos/rotnov/vtk.rs/branches/master/protection
 
 ### Required checks
 
+- `paths-check` — every changed path in the PR is inside § What is writable, or the PR carries
+  the `upstream-sync` label (`.github/scripts/paths_check.py`). Live today.
+- `language-check` — no non-English-script character in `docs/`, `rust/`, or the root meta-files
+  (`.github/scripts/check_ascii.py`). Live today.
 - `cargo test --workspace --all-features`
 - `cargo clippy --workspace --all-targets --all-features -- -D warnings`
 - `cargo fmt --all --check`
@@ -237,8 +244,9 @@ CLAUDE.md               pointer to this file (Claude Code loads CLAUDE.md by def
 ### What is writable
 
 Writable: `rust/`, `docs/`, `.claude/` (agent tooling — installed skills, settings),
-`.github/workflows/` (our CI; nothing upstream lives there), and the project meta-files at the
-repository root that are *not* part of upstream VTK — currently
+`.github/workflows/` and `.github/scripts/` (our CI and the scripts it runs — upstream's own
+`.github/` holds only `pull_request_template.md`, so nothing else under it is contested), and the
+project meta-files at the repository root that are *not* part of upstream VTK — currently
 `AGENTS.md`, `ROADMAP.md`, `CLAUDE.md`. (Verify with
 `git ls-tree --name-only <upstream-commit>`: if a root file exists in the upstream tree, it is
 not ours to touch.)
@@ -303,6 +311,12 @@ Strategy and rationale: `docs/decisions/0003-upstream-sync-strategy.md`. The pro
 3. **Recount** `ROADMAP.md` § Snapshot with the commands recorded there.
 
 4. **Write the ADR** for this bump: old tag, new tag, diff summary, what it cost.
+
+5. **Open the PR with the `upstream-sync` label.** The merge from step 1 touches every path in
+   the read-only upstream tree at once, which `paths-check` (`.github/scripts/paths_check.py`)
+   would otherwise flag as a violation. Apply the `upstream-sync` label to this PR — the label
+   already exists on the repo — to exempt it; never weaken the allowlist itself to get a green
+   check here.
 
 Never bump in the middle of a phase — it moves the target while modules are being ported against
 it. Bump for a reason, not on a schedule.

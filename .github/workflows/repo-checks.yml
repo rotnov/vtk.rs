@@ -1,0 +1,52 @@
+name: repo-checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    branches: [master]
+
+jobs:
+  paths-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install test dependencies
+        run: pip install -r .github/scripts/requirements-dev.txt
+
+      - name: Run paths_check.py's own tests
+        run: python3 -m pytest .github/scripts/tests/test_paths_check.py -v
+
+      - name: Fetch base branch
+        run: git fetch origin "${{ github.base_ref }}"
+
+      - name: Check changed paths against the writable allowlist
+        env:
+          UPSTREAM_SYNC: ${{ contains(github.event.pull_request.labels.*.name, 'upstream-sync') }}
+        run: |
+          BASE=$(git merge-base "origin/${{ github.base_ref }}" HEAD)
+          python3 .github/scripts/paths_check.py "$BASE" HEAD "$UPSTREAM_SYNC"
+
+  language-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install test dependencies
+        run: pip install -r .github/scripts/requirements-dev.txt
+
+      - name: Run check_ascii.py's own tests
+        run: python3 -m pytest .github/scripts/tests/test_check_ascii.py -v
+
+      - name: Check for non-English content
+        run: python3 .github/scripts/check_ascii.py
