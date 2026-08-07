@@ -236,6 +236,35 @@ Record the CI run URLs and pass/fail table in this plan document (mirroring the 
 `docs/superpowers/plans/2026-08-07-rust-workspace-ci.md`) once run, since the disposable branch that
 produced them will no longer exist.
 
+### Smoke-test results (recorded after the run; `smoke/wasm-check-red` and PR #37 no longer exist)
+
+Trigger run (`std::os::unix::fs::PermissionsExt` added to `vtk-common-core`), commit `c9ba078751`:
+
+| Job | Result | Run |
+| --- | --- | --- |
+| `cargo-check-wasm32` | failure (expected) | [31185265110](https://github.com/rotnov/vtk.rs/actions/runs/31185265110/job/92888110904) |
+| `cargo-clippy` | success | [31185265110](https://github.com/rotnov/vtk.rs/actions/runs/31185265110/job/92888110897) |
+| `cargo-fmt` | success | [31185265110](https://github.com/rotnov/vtk.rs/actions/runs/31185265110/job/92888111142) |
+| `cargo-test` | success | [31185265110](https://github.com/rotnov/vtk.rs/actions/runs/31185265110/job/92888110824) |
+| `language-check` | success | [31185268378](https://github.com/rotnov/vtk.rs/actions/runs/31185268378/job/92888117434) |
+| `paths-check` | success | [31185268378](https://github.com/rotnov/vtk.rs/actions/runs/31185268378/job/92888117555) |
+
+Revert run (commit `d9f27f14c3`), confirming the job returns to green once the violation is gone:
+
+| Job | Result | Run |
+| --- | --- | --- |
+| `cargo-check-wasm32` | success | [31185700247](https://github.com/rotnov/vtk.rs/actions/runs/31185700247/job/92889546641) |
+| `cargo-clippy` | success | [31185700247](https://github.com/rotnov/vtk.rs/actions/runs/31185700247/job/92889546674) |
+| `cargo-fmt` | success | [31185700247](https://github.com/rotnov/vtk.rs/actions/runs/31185700247/job/92889546926) |
+| `cargo-test` | success | [31185700247](https://github.com/rotnov/vtk.rs/actions/runs/31185700247/job/92889546729) |
+| `language-check` | success | [31185700483](https://github.com/rotnov/vtk.rs/actions/runs/31185700483/job/92889546611) |
+| `paths-check` | success | [31185700483](https://github.com/rotnov/vtk.rs/actions/runs/31185700483/job/92889546484) |
+
+The new job isolates exactly as designed: it alone went red on a real wasm-incompatible API and
+alone returned to green once that API use was removed, while the three native-target jobs
+(`cargo-test`/`cargo-clippy`/`cargo-fmt`) and the two unrelated checks (`language-check`/
+`paths-check`) stayed green throughout, confirming no cross-job coupling.
+
 ## After the smoke test: flip the ROADMAP checkbox
 
 Current text at `ROADMAP.md:66-71`:
