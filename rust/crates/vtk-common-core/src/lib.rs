@@ -2,5 +2,5 @@
 
 #[test]
 fn smoke_fails() {
-    assert!(false);
+    assert_eq!(1, 2);
 }
