@@ -6,6 +6,15 @@
 > during brainstorming (issue [#35](https://github.com/rotnov/vtk.rs/issues/35)): a visible,
 > auto-updating progress signal is worth having early, even before the ledger and lessons panels
 > the full design calls for exist.
+>
+> The `superpowers:brainstorming` skill's own next step asks the user to review this written spec
+> file before implementation planning starts. `AGENTS.md` § This project is AI-autopilot overrides
+> that here: "Don't wait for human code review before proceeding," "Own the decision, don't defer
+> it," and "no plan may depend on a user confirming a step" — and § Untrusted content states
+> `AGENTS.md` wins over any installed skill. The design itself was already approved by the owner
+> conversationally during brainstorming and matches issue #35's scope; this document is that
+> approved design made durable, not a new decision awaiting sign-off. Proceeding straight to
+> `writing-plans` on that basis.
 
 ## Problem
 
@@ -85,7 +94,7 @@ push to master
       |
       |  uv run generate_dashboard.py
       v
-docs/test-mapping.csv  --(parsed)-->  compute_progress()  --(rendered)-->  _site/index.html
+docs/test-mapping.csv  --(parsed)-->  compute_progress()  --(rendered)-->  .github/scripts/_site/index.html
                                                                                   |
                                                             actions/upload-pages-artifact
                                                                                   |
@@ -95,9 +104,13 @@ docs/test-mapping.csv  --(parsed)-->  compute_progress()  --(rendered)-->  _site
                                                                       GitHub Pages (live URL)
 ```
 
-`_site/` is a build directory inside the CI runner's ephemeral workspace — never staged, never
-committed, gone when the job ends. If a contributor runs the generator locally, `.github/.gitignore`
-excludes `_site/` so it can't accidentally get added to a commit.
+The build output lives at `.github/scripts/_site/`, not a repo-root `_site/`: `AGENTS.md` § What
+is writable lists `.github/scripts/` itself as writable, not a bare `.github/`, and a repo-root
+`_site/` would need an entry in the upstream-owned root `.gitignore` to stay untracked. Putting the
+output under the writable directory sidesteps both problems — a nested
+`.github/scripts/.gitignore` containing `_site/` (matching this repo's existing pattern of
+directory-scoped `.gitignore` files) keeps it untracked if a contributor runs the generator
+locally. It is never staged, never committed, and gone when the CI job ends either way.
 
 ### Generator: `.github/scripts/generate_dashboard.py`
 
@@ -115,9 +128,10 @@ so the logic is unit-testable without touching disk:
   frameworks), a single headline stat, and a footer line ("generated from commit `<sha>` at
   `<generated_at>`") so a viewer can tell the page isn't stale without checking Actions.
 - `main()` — reads `docs/test-mapping.csv` with `csv.DictReader`, calls the two functions above,
-  writes the result to `_site/index.html` (creating the directory). Reads `commit_sha` from the
-  `GITHUB_SHA` environment variable (set by Actions; falls back to `git rev-parse HEAD` when
-  absent, so local runs still work) and `generated_at` from the current UTC time.
+  writes the result to `.github/scripts/_site/index.html` (creating the directory). Reads
+  `commit_sha` from the `GITHUB_SHA` environment variable (set by Actions; falls back to
+  `git rev-parse HEAD` when absent, so local runs still work) and `generated_at` from the current
+  UTC time.
 
 ### Unit test: `.github/scripts/tests/test_generate_dashboard.py`
 
@@ -141,12 +155,14 @@ Two jobs:
 
 1. `build` — checks out the repo, installs `uv`, runs the generator's own unit tests (fails the
    job if they fail — never publish from a generator whose own tests are red), runs the generator,
-   uploads `_site/` via `actions/upload-pages-artifact@v3`.
-2. `deploy` — needs `build`, uses `actions/deploy-pages@v4`. Requires `permissions: pages: write`
+   uploads `.github/scripts/_site/` via `actions/upload-pages-artifact`.
+2. `deploy` — needs `build`, uses `actions/deploy-pages`. Requires `permissions: pages: write`
    and `id-token: write` at the job level, and `environment: { name: github-pages }` so the
    deployment shows up in the repo's Environments tab. These are the standard requirements for the
    official Pages Actions flow; omitting either makes `deploy-pages` fail with a permissions error,
-   not a silent no-op.
+   not a silent no-op. Exact action version pins (`@v3`/`@v4` as of this writing) are confirmed
+   against GitHub's current documented flow at implementation time rather than asserted here, since
+   this spec is not the place that stays current with upstream Action releases.
 
 ### One-time manual step (not part of any PR)
 
@@ -161,7 +177,11 @@ gh api -X POST repos/rotnov/vtk.rs/pages -f build_type=workflow
 
 This changes a live repository setting and is called out here explicitly so implementation asks
 before running it, the same way any repository-configuration change does — it is not bundled into
-the implementation plan's automated steps.
+the implementation plan's automated steps. It must happen **before** `pages.yml` first reaches
+`master`: `deploy-pages` requires the Pages source to already be set to "GitHub Actions," so if the
+workflow file merges first, the very first `build`+`deploy` run on `master` fails on that
+precondition rather than on anything the implementation got wrong. The implementation plan does the
+setting flip (with the owner's confirmation) as its first step, before the workflow file is added.
 
 ## Error handling
 
@@ -190,11 +210,14 @@ concrete, verification bar instead:
    `build` and `deploy` jobs both go green on the actual push to `master`, then load the live Pages
    URL and visually confirm it shows "0 catalogued tests yet" (today's true state) rather than a
    stale cache, a 404, or a blank page.
-3. **A deliberate failure check**: temporarily point the generator at a nonexistent CSV path (in a
-   throwaway commit on a scratch branch, never pushed to `master`) and confirm the `build` job
-   fails loudly instead of publishing an empty page — this is this workflow's equivalent of the
-   gate convention's "prove it fails on a real violation," adapted to a publish step instead of a
-   PR check.
+3. **A deliberate failure check, run locally rather than through Actions**: `pages.yml` triggers
+   only on `push: branches: [master]`, so a commit on a scratch branch would never actually invoke
+   it — the disposable-branch mechanism the gate convention relies on doesn't apply here. Instead,
+   run the exact commands the `build` job runs (`uv run generate_dashboard.py`, pointed at a
+   temporarily-renamed or nonexistent `docs/test-mapping.csv` path) directly in a local checkout and
+   confirm the process exits non-zero instead of writing a page. This is this workflow's equivalent
+   of the gate convention's "prove it fails on a real violation," adapted to a publish step whose
+   trigger can't be exercised from a throwaway branch.
 
 ## Out of scope
 
