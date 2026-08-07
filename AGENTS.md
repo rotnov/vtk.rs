@@ -237,8 +237,9 @@ CLAUDE.md               pointer to this file (Claude Code loads CLAUDE.md by def
 ### What is writable
 
 Writable: `rust/`, `docs/`, `.claude/` (agent tooling — installed skills, settings),
-`.github/workflows/` (our CI; nothing upstream lives there), and the project meta-files at the
-repository root that are *not* part of upstream VTK — currently
+`.github/workflows/` and `.github/scripts/` (our CI and the scripts it runs — upstream's own
+`.github/` holds only `pull_request_template.md`, so nothing else under it is contested), and the
+project meta-files at the repository root that are *not* part of upstream VTK — currently
 `AGENTS.md`, `ROADMAP.md`, `CLAUDE.md`. (Verify with
 `git ls-tree --name-only <upstream-commit>`: if a root file exists in the upstream tree, it is
 not ours to touch.)
