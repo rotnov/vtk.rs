@@ -63,12 +63,12 @@ needed.
       see `docs/decisions/0001-test-coverage-metric.md`'s 2026-08-07 amendment and
       `docs/lessons/0010-adr-tool-claim-never-run.md`. Wire this job in the same PR as Phase 1's
       first crate with an actually-executing test, not before.
-- [ ] `cargo check --target wasm32-unknown-unknown` wired into CI for `Common*`/`Filters*`
-      crates, per `AGENTS.md` § WebAssembly ("from the moment those crates exist"). The trigger
-      condition already fired — the 7 `Common*` skeletons above exist — so this is a known,
-      tracked gap rather than a future deferral: close it in a dedicated small PR (with its own
-      positive-control smoke test, per this repo's convention) before Phase 1 implementation
-      work begins in earnest.
+- [x] `cargo check --target wasm32-unknown-unknown` wired into CI for `Common*`/`Filters*`
+      crates, per `AGENTS.md` § WebAssembly — done: `cargo-check-wasm32` job in
+      `.github/workflows/rust-checks.yml`, covering all 7 `vtk-common-*` crates via explicit `-p`
+      flags (`Filters*` don't exist yet — add them to the job when they do), proven by a
+      positive-control smoke test to fail on a real wasm-incompatible API — see
+      `docs/superpowers/plans/2026-08-07-wasm-check-common.md`.
 - [x] Protect `master` on `rotnov/vtk.rs` — done: PR required, 0 approvals, no direct or force
       pushes, no deletion, linear history, `enforce_admins` on.
 - [ ] Add the required status checks to that protection once CI exists. Until then "green CI is
