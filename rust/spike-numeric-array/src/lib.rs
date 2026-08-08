@@ -5,5 +5,7 @@
 //! benchmark it against equivalent C++, per the ADR's "Validation is required" clause.
 
 pub mod array;
+pub mod points;
 
 pub use array::DataArray;
+pub use points::{Points, PointsError};
