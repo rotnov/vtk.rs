@@ -8,7 +8,6 @@ pub fn crate_has_code<I: IntoIterator<Item = String>>(file_contents: I) -> bool 
     })
 }
 
-#[allow(dead_code)] // wired up by Task 6
 pub fn crate_has_code_at(src_dir: &Path) -> std::io::Result<bool> {
     let mut file_contents = Vec::new();
     collect_rs_files(src_dir, &mut file_contents)?;

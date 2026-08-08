@@ -1,7 +1,6 @@
 use crate::cmake_parser::ParsedCMakeFile;
 use crate::ledger::{LedgerRow, module_of};
 
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 #[derive(Debug, PartialEq)]
 pub struct Violation {
     pub assertion: &'static str,
@@ -29,7 +28,6 @@ fn row(
     }
 }
 
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 pub fn check_exists(rows: &[LedgerRow], exists_fn: impl Fn(&str) -> bool) -> Vec<Violation> {
     rows.iter()
         .filter(|r| !exists_fn(&r.original_path))
@@ -43,7 +41,6 @@ pub fn check_exists(rows: &[LedgerRow], exists_fn: impl Fn(&str) -> bool) -> Vec
         .collect()
 }
 
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 pub fn check_fresh(rows: &[LedgerRow], sha_fn: impl Fn(&str) -> Option<String>) -> Vec<Violation> {
     rows.iter()
         .filter_map(|r| {
@@ -63,7 +60,6 @@ pub fn check_fresh(rows: &[LedgerRow], sha_fn: impl Fn(&str) -> Option<String>) 
         .collect()
 }
 
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 pub fn check_complete(
     rows: &[LedgerRow],
     parsed_files: &[(String, String, ParsedCMakeFile)],
@@ -106,7 +102,6 @@ pub fn check_complete(
     violations
 }
 
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 pub fn check_parity(rows: &[LedgerRow], crates: &[(String, bool)]) -> Vec<Violation> {
     crates
         .iter()

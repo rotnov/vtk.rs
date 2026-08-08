@@ -1,4 +1,3 @@
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 pub const CXX_OPTIONS: &[&str] = &[
     "NO_DATA",
     "NO_VALID",
@@ -9,7 +8,6 @@ pub const CXX_OPTIONS: &[&str] = &[
     "WEBGPU_GRAPHICS_BACKEND",
 ];
 
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 pub const PYTHON_OPTIONS: &[&str] = &[
     "NO_DATA",
     "NO_VALID",
@@ -22,21 +20,18 @@ pub const PYTHON_OPTIONS: &[&str] = &[
     "LOOSE_VALID",
 ];
 
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 #[derive(Debug, PartialEq)]
 pub struct ParsedTest {
     pub name: String,
     pub raw_token: String,
 }
 
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 #[derive(Debug, Default)]
 pub struct ParsedCMakeFile {
     pub tests: Vec<ParsedTest>,
     pub unresolved: Vec<String>,
 }
 
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 pub fn parse_test_macro_calls(
     text: &str,
     macro_name: &str,
@@ -55,7 +50,6 @@ pub fn parse_test_macro_calls(
     result
 }
 
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 fn strip_comments(text: &str) -> String {
     text.lines()
         .map(|line| match line.find('#') {
@@ -69,7 +63,6 @@ fn strip_comments(text: &str) -> String {
 /// Finds every `macro_name(...)` call in `text` and returns the raw text between the matching
 /// parentheses for each one. Assumes no nested parentheses inside test macro calls (true for
 /// every vtk_add_test_cxx/vtk_add_test_python call in the reference tree).
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 fn find_macro_call_args(text: &str, macro_name: &str) -> Vec<String> {
     let mut calls = Vec::new();
     let mut search_from = 0;
@@ -95,12 +88,10 @@ fn find_macro_call_args(text: &str, macro_name: &str) -> Vec<String> {
     calls
 }
 
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 fn tokenize_args(args: &str) -> Vec<String> {
     args.split_whitespace().map(|s| s.to_string()).collect()
 }
 
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 fn classify_token(token: &str, ext: &str, known_options: &[&str], result: &mut ParsedCMakeFile) {
     if known_options.contains(&token) {
         return;

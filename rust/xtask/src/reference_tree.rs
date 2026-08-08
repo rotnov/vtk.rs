@@ -2,7 +2,6 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-#[allow(dead_code)] // wired up by Task 6
 pub fn repo_root() -> io::Result<PathBuf> {
     let output = Command::new("git")
         .args(["rev-parse", "--show-toplevel"])
@@ -17,12 +16,10 @@ pub fn repo_root() -> io::Result<PathBuf> {
     Ok(PathBuf::from(path))
 }
 
-#[allow(dead_code)] // wired up by Task 6
 pub fn file_exists_in_tree(repo_root: &Path, rel_path: &str) -> bool {
     repo_root.join(rel_path).is_file()
 }
 
-#[allow(dead_code)] // wired up by Task 6
 pub fn blob_sha_at_head(repo_root: &Path, rel_path: &str) -> Option<String> {
     let output = Command::new("git")
         .arg("rev-parse")

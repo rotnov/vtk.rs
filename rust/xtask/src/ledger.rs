@@ -1,16 +1,18 @@
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 pub struct LedgerRow {
     pub original_path: String,
     pub original_test: String,
     pub original_sha: String,
     pub rust_path: String,
+    // Parsed to keep the CSV schema round-trip complete; no current assertion reads these two
+    // columns, so clippy sees them as dead without this allow.
+    #[allow(dead_code)]
     pub rust_test: String,
+    #[allow(dead_code)]
     pub category: String,
     pub status: String,
     pub notes: String,
 }
 
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 pub fn parse_ledger(csv_text: &str) -> Result<Vec<LedgerRow>, String> {
     let mut reader = csv::ReaderBuilder::new().from_reader(csv_text.as_bytes());
     let mut rows = Vec::new();
@@ -37,7 +39,6 @@ pub fn parse_ledger(csv_text: &str) -> Result<Vec<LedgerRow>, String> {
     Ok(rows)
 }
 
-#[allow(dead_code)] // Wired up by Task 6 in orchestration
 pub fn module_of(original_path: &str) -> Option<&str> {
     original_path
         .split_once("/Testing/")
