@@ -11,6 +11,9 @@ use assertions::Violation;
 use cmake_parser::ParsedCMakeFile;
 use ledger::LedgerRow;
 
+// Mirrors rust/Cargo.toml's [workspace.members] — add new crates here when they're added there.
+// (Same manual-list convention as cargo-check-wasm32 in .github/workflows/rust-checks.yml; see
+// AGENTS.md § Required checks.)
 const WORKSPACE_CRATES: &[&str] = &[
     "vtk-common-core",
     "vtk-common-math",

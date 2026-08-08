@@ -60,6 +60,15 @@ pub fn check_fresh(rows: &[LedgerRow], sha_fn: impl Fn(&str) -> Option<String>) 
         .collect()
 }
 
+/// Extracts the subdirectory segment right after `/Testing/` from a path string,
+/// e.g. `Common/Core/Testing/Cxx/CMakeLists.txt` -> `Some("Cxx")`. Used to distinguish
+/// the Cxx and Python test registrations within the same module, which can otherwise
+/// collide on identically-named tests (e.g. both register a `TestVariant`).
+fn testing_subdir(path: &str) -> Option<&str> {
+    path.split_once("/Testing/")
+        .and_then(|(_, rest)| rest.split('/').next())
+}
+
 pub fn check_complete(
     rows: &[LedgerRow],
     parsed_files: &[(String, String, ParsedCMakeFile)],
@@ -72,7 +81,10 @@ pub fn check_complete(
             .collect();
 
         for test in &parsed.tests {
-            let has_row = module_rows.iter().any(|r| r.original_test == test.name);
+            let has_row = module_rows.iter().any(|r| {
+                r.original_test == test.name
+                    && testing_subdir(&r.original_path) == testing_subdir(file_path)
+            });
             if !has_row {
                 violations.push(Violation {
                     assertion: "complete",
@@ -309,6 +321,65 @@ mod tests {
         )];
         let violations = check_complete(&rows, &parsed);
         assert!(violations.is_empty());
+    }
+
+    #[test]
+    fn complete_does_not_let_a_cxx_row_satisfy_the_same_named_python_test() {
+        // Common/Core/Testing/Cxx/CMakeLists.txt and .../Python/CMakeLists.txt both register
+        // a test named "TestVariant". A ledger row for the Cxx test must not silently satisfy
+        // the Python registration too — they are different files with different tests.
+        let rows = vec![row(
+            "Common/Core/Testing/Cxx/TestVariant.cxx",
+            "TestVariant",
+            "sha",
+            "p",
+            "ported",
+            "",
+        )];
+        let parsed = vec![
+            (
+                "Common/Core".to_string(),
+                "Common/Core/Testing/Cxx/CMakeLists.txt".to_string(),
+                ParsedCMakeFile {
+                    tests: vec![ParsedTest {
+                        name: "TestVariant".to_string(),
+                        raw_token: "TestVariant.cxx".to_string(),
+                    }],
+                    unresolved: vec![],
+                },
+            ),
+            (
+                "Common/Core".to_string(),
+                "Common/Core/Testing/Python/CMakeLists.txt".to_string(),
+                ParsedCMakeFile {
+                    tests: vec![ParsedTest {
+                        name: "TestVariant".to_string(),
+                        raw_token: "TestVariant.py".to_string(),
+                    }],
+                    unresolved: vec![],
+                },
+            ),
+        ];
+        let violations = check_complete(&rows, &parsed);
+
+        // Exactly one violation: the Python TestVariant, which has no row of its own.
+        assert_eq!(violations.len(), 1);
+        assert!(
+            violations[0]
+                .message
+                .contains("Common/Core/Testing/Python/CMakeLists.txt")
+        );
+        assert!(violations[0].message.contains("TestVariant"));
+
+        // The Cxx TestVariant must not be reported — it's satisfied by the Cxx row — and both
+        // parsed file entries must actually have been evaluated (a subdir-level module key
+        // regression would instead make the module lookup for Python come up empty and either
+        // over- or under-report here).
+        assert!(
+            !violations
+                .iter()
+                .any(|v| v.message.contains("Common/Core/Testing/Cxx/CMakeLists.txt"))
+        );
     }
 
     // ---- parity ----

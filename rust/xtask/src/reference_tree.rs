@@ -17,7 +17,7 @@ pub fn repo_root() -> io::Result<PathBuf> {
 }
 
 pub fn file_exists_in_tree(repo_root: &Path, rel_path: &str) -> bool {
-    repo_root.join(rel_path).is_file()
+    blob_sha_at_head(repo_root, rel_path).is_some()
 }
 
 pub fn blob_sha_at_head(repo_root: &Path, rel_path: &str) -> Option<String> {
@@ -54,6 +54,14 @@ mod tests {
     fn file_exists_in_tree_is_false_for_a_missing_file() {
         let root = repo_root().unwrap();
         assert!(!file_exists_in_tree(&root, "does/not/exist.cxx"));
+    }
+
+    #[test]
+    fn file_exists_in_tree_is_false_for_a_path_outside_the_repo() {
+        let root = repo_root().unwrap();
+        // A real file on disk, but not inside the repo's git tree at all — the old filesystem-based
+        // check would incorrectly report this as existing.
+        assert!(!file_exists_in_tree(&root, "/etc/hosts"));
     }
 
     #[test]

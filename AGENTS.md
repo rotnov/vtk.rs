@@ -184,6 +184,9 @@ gh api repos/rotnov/vtk.rs/branches/master/protection
   branch protection — see § Required checks' opening paragraph. No issue is filed for the
   required-status-check wiring itself yet (confirmed via `gh issue list` while writing this plan:
   no open issue covers it); file one before starting that work rather than inventing a number here.
+  The crate list `check_parity` walks (`WORKSPACE_CRATES` in `rust/xtask/src/main.rs`) is
+  hand-maintained the same way as the wasm32 job's `-p` flags — add new crates there when they're
+  added to `rust/Cargo.toml`.
 - the coverage gate, below — wired starting with Phase 1's first crate that has an actually-
   executing test, not with the bare workspace skeleton; see
   `docs/decisions/0001-test-coverage-metric.md`'s amendment
