@@ -7,7 +7,6 @@
 //! nine `DataArray` variants is deferred to the real `vtkPoints` port task (issue #45).
 
 use crate::array::DataArray;
-use std::fmt;
 use std::sync::{Arc, RwLock};
 
 #[derive(Debug, PartialEq)]
@@ -71,18 +70,6 @@ impl Points {
     }
 }
 
-impl fmt::Debug for Points {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Points {{ xyz: Arc<RwLock<Vec<f64>>> }}")
-    }
-}
-
-impl PartialEq for Points {
-    fn eq(&self, other: &Self) -> bool {
-        Arc::ptr_eq(&self.xyz, &other.xyz)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -90,13 +77,19 @@ mod tests {
     #[test]
     fn rejects_non_f64_data_arrays() {
         let data = DataArray::from_i32(vec![1, 2, 3]);
-        assert_eq!(Points::new(data), Err(PointsError::RequiresF64));
+        match Points::new(data) {
+            Err(e) => assert_eq!(e, PointsError::RequiresF64),
+            Ok(_) => panic!("expected Err(PointsError::RequiresF64)"),
+        }
     }
 
     #[test]
     fn rejects_lengths_not_divisible_by_three() {
         let data = DataArray::from_f64(vec![1.0, 2.0]);
-        assert_eq!(Points::new(data), Err(PointsError::NotDivisibleByThree));
+        match Points::new(data) {
+            Err(e) => assert_eq!(e, PointsError::NotDivisibleByThree),
+            Ok(_) => panic!("expected Err(PointsError::NotDivisibleByThree)"),
+        }
     }
 
     #[test]
