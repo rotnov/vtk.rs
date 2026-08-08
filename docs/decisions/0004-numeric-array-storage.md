@@ -61,7 +61,7 @@ code that has no reason to inherit it.
 `vtkIdType` (the index type used throughout VTK for point/cell/element counts) is fixed to `i64`,
 unconditionally — not mirrored as a build-time-configurable width the way upstream's
 `VTK_USE_64BIT_IDS` CMake flag does it. Modern VTK defaults to 64-bit IDs; fixing it removes a
-combinatorial axis (two ID widths × ten element types) for a configuration this project has no
+combinatorial axis (two ID widths x ten element types) for a configuration this project has no
 current need to support. `vtkIdType` reuses the existing `I64` variant — no separate enum case.
 
 ### Storage: `Arc<RwLock<Vec<T>>>` per variant — shared, mutable, thread-safe

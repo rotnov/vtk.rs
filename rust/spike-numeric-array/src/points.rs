@@ -7,7 +7,6 @@
 //! nine `DataArray` variants is deferred to the real `vtkPoints` port task (issue #45).
 
 use crate::array::DataArray;
-use std::sync::{Arc, RwLock};
 
 #[derive(Debug, PartialEq)]
 pub enum PointsError {
@@ -18,55 +17,62 @@ pub enum PointsError {
 }
 
 pub struct Points {
-    xyz: Arc<RwLock<Vec<f64>>>,
+    data: DataArray,
 }
 
 impl Points {
     pub fn new(data: DataArray) -> Result<Self, PointsError> {
-        match data {
+        match &data {
             DataArray::F64(buf) => {
                 if buf.read().unwrap().len() % 3 != 0 {
                     return Err(PointsError::NotDivisibleByThree);
                 }
-                Ok(Points { xyz: buf })
             }
-            _ => Err(PointsError::RequiresF64),
+            _ => return Err(PointsError::RequiresF64),
         }
+        Ok(Points { data })
     }
 
     /// `[xmin, xmax, ymin, ymax, zmin, zmax]`, matching `vtkPoints::GetBounds()`'s layout.
     /// `None` for an empty point set (real `vtkPoints::GetBounds()` on 0 points leaves
     /// `VTK_DOUBLE_MAX`/`-VTK_DOUBLE_MAX` sentinels instead — surfaced here as `None`).
     ///
-    /// Acquires the lock exactly once — see ADR 0004's "match once per call, not once per
-    /// element" (this is the per-call dispatch, even though there's only one variant to match
-    /// here; the lock acquisition itself must not repeat per point).
+    /// Dispatches on the `DataArray` variant exactly once per call, then acquires the lock
+    /// exactly once — see ADR 0004's "match once per call, not once per element". Only the
+    /// `F64` arm is reachable in practice, since `new()` rejects non-`F64` data, but the
+    /// `match` must be textually present and executed on every call, since that dispatch is
+    /// the literal thing this benchmark exists to measure.
     pub fn bounds(&self) -> Option<[f64; 6]> {
-        let guard = self.xyz.read().unwrap();
-        let mut chunks = guard.chunks_exact(3);
-        let first = chunks.next()?;
-        let mut bounds = [first[0], first[0], first[1], first[1], first[2], first[2]];
-        for p in chunks {
-            if p[0] < bounds[0] {
-                bounds[0] = p[0];
+        match &self.data {
+            DataArray::F64(buf) => {
+                let guard = buf.read().unwrap();
+                let mut chunks = guard.chunks_exact(3);
+                let first = chunks.next()?;
+                let mut bounds = [first[0], first[0], first[1], first[1], first[2], first[2]];
+                for p in chunks {
+                    if p[0] < bounds[0] {
+                        bounds[0] = p[0];
+                    }
+                    if p[0] > bounds[1] {
+                        bounds[1] = p[0];
+                    }
+                    if p[1] < bounds[2] {
+                        bounds[2] = p[1];
+                    }
+                    if p[1] > bounds[3] {
+                        bounds[3] = p[1];
+                    }
+                    if p[2] < bounds[4] {
+                        bounds[4] = p[2];
+                    }
+                    if p[2] > bounds[5] {
+                        bounds[5] = p[2];
+                    }
+                }
+                Some(bounds)
             }
-            if p[0] > bounds[1] {
-                bounds[1] = p[0];
-            }
-            if p[1] < bounds[2] {
-                bounds[2] = p[1];
-            }
-            if p[1] > bounds[3] {
-                bounds[3] = p[1];
-            }
-            if p[2] < bounds[4] {
-                bounds[4] = p[2];
-            }
-            if p[2] > bounds[5] {
-                bounds[5] = p[2];
-            }
+            _ => unreachable!("Points::new rejects non-F64 data"),
         }
-        Some(bounds)
     }
 }
 

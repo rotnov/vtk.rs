@@ -740,7 +740,7 @@ Create `rust/spike-numeric-array/cpp/run_benchmark.sh`:
 set -euo pipefail
 cd "$(dirname "$0")"
 
-g++ -O2 -g -std=c++17 points_bounds.cpp -o points_bounds
+g++ -O3 -g -std=c++17 points_bounds.cpp -o points_bounds
 
 # --collect-atstart=no: nothing is counted until CALLGRIND_TOGGLE_COLLECT turns collection on
 # inside main() — so the printed "summary:" line reflects only the bounds_of_points() call, not
@@ -937,15 +937,15 @@ explicit instruction to actually run the benchmark, not just plan it.
   isolates the kernel/dispatch cost the ADR is actually about, rather than the lock.
 - [ ] **Step 6:** Report the actual numbers to the user, without spin, per the ralph-loop's
   CRITICAL RULE — this is a real go/no-go signal for the whole port project, per the user's own
-  framing ("если бенчмарк ничего не покажет существенного, то может и нет смысла продолжать").
-  Do not round a bad result into a good one, and do not claim validation succeeded if the numbers
-  are ambiguous or worse for Rust. State plainly which of the three cases holds — Rust's
+  framing (if the benchmark shows nothing significant, then maybe there is no point continuing the
+  port). Do not round a bad result into a good one, and do not claim validation succeeded if the
+  numbers are ambiguous or worse for Rust. State plainly which of the three cases holds — Rust's
   per-point instruction count is (a) comparable to or better than C++ (validates ADR 0004 as
   written), (b) meaningfully worse (the design has a real, measured cost), or (c) the benchmark
   itself is inconclusive (e.g. both toggle setups failed, or the two binaries could not be built
   under identical conditions) — and stop there. Do not propose which of the ADR's own fallback
   options (revise the design vs. accept the cost) to take, and do not ask the user to choose
-  between continuing the port or not: the user already stated the decision rule themselves
-  ("если бенчмарк ничего не покажет существенного, то может и нет смысла продолжать"), so a
+  between continuing the port or not: the user already stated the decision rule themselves (if the
+  benchmark shows nothing significant, then maybe there is no point continuing the port), so a
   plain, honest report of the result is the deliverable — the decision on how to act on it is
   theirs to make once they have it, not a question to route back to them.
