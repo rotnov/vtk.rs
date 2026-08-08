@@ -84,10 +84,11 @@ needed.
       tests added / removed / changed and sources changed in ported modules. Not needed until the
       first version bump, but it is what makes that bump reviewable rather than opaque. Tracked as
       issue #44.
-- [ ] Decide and record (in `docs/decisions/`) the numeric-array storage strategy for
+- [x] Decide and record (in `docs/decisions/`) the numeric-array storage strategy for
       `vtk-common-core` (this determines a lot downstream): enum-of-typed-`Vec` vs generic
       struct, and how `vtkDataArray`'s runtime type dispatch (`vtkTemplateMacro`) maps to Rust.
-      Tracked as issue #43.
+      See `docs/decisions/0004-numeric-array-storage.md` — provisional until its mandated
+      synthetic microbenchmark runs. Tracked as issue #43.
 - [x] GitHub Pages status dashboard — one live stat, percent of catalogued tests with
       `status=ported` in `docs/test-mapping.csv`, rebuilt on every push to `master` via
       `.github/workflows/pages.yml` (generator: `.github/scripts/generate_dashboard.py`). See

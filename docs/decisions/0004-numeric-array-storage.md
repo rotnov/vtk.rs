@@ -118,9 +118,11 @@ performance rationale for the port before it is even tested.
 ### Validation is required before this design is trusted, not assumed
 
 This ADR is a considered bet, not a proven one. Before it is relied on beyond `vtk-common-core`,
-the implementation plan for `vtk-common-core` must include a synthetic microbenchmark — a
-representative kernel (e.g. a transform/reduction over `vtkPoints`-shaped coordinate data) run both
-through this design and through the equivalent upstream C++ via the reference tree — measured with
+a synthetic microbenchmark is required — a representative kernel (e.g. a transform/reduction over
+`vtkPoints`-shaped coordinate data) run both through this design and through an equivalent,
+conservatively-optimized hand-written C++ reference (not literally the VTK source tree, which
+carries virtual-dispatch and object-model overhead this design doesn't need to reproduce to answer
+the question this ADR is actually asking) — measured with
 `gungraun` (the actively maintained successor to `iai-callgrind`, which rebranded and stopped
 receiving releases under its old name; deterministic instruction/cache-miss counts, not wall-clock,
 to avoid machine noise). A result showing this design is slower than the C++ it replaces does not necessarily
