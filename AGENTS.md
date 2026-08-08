@@ -179,9 +179,11 @@ gh api repos/rotnov/vtk.rs/branches/master/protection
   created. `IO*` crates are excluded by design, see **WebAssembly**.
 - `cargo xtask ledger-check` — the four ledger assertions (*exists*, *complete*, *fresh*,
   *parity*); see **The test-mapping ledger**. Cheap, and it fails loudly the moment the ledger
-  stops describing the reference tree instead of letting it drift. Not yet wired — dependency-order
-  Step 3, see `docs/superpowers/specs/2026-08-06-autonomous-operation-design.md` § Dependency
-  order.
+  stops describing the reference tree instead of letting it drift. Live today
+  (`xtask-ledger-check` in `.github/workflows/rust-checks.yml`), but not yet marked required in
+  branch protection — see § Required checks' opening paragraph. No issue is filed for the
+  required-status-check wiring itself yet (confirmed via `gh issue list` while writing this plan:
+  no open issue covers it); file one before starting that work rather than inventing a number here.
 - the coverage gate, below — wired starting with Phase 1's first crate that has an actually-
   executing test, not with the bare workspace skeleton; see
   `docs/decisions/0001-test-coverage-metric.md`'s amendment
@@ -531,13 +533,18 @@ original_path,original_test,original_sha,rust_path,rust_test,category,status,not
 | column | meaning |
 |---|---|
 | `original_path` | path in the reference tree, e.g. `Common/Core/Testing/Cxx/TestArrayAPI.cxx` |
-| `original_test` | the registered CTest name |
+| `original_test` | the bare CMake-macro-call test name, **not** the CTest-registered name (see note below) |
 | `original_sha` | git blob SHA of `original_path` at port time — `git rev-parse HEAD:<path>` |
 | `rust_path` | e.g. `rust/crates/vtk-common-core/src/array/api.rs` |
 | `rust_test` | the `#[test]` function name, empty while `status=deferred` |
 | `category` | `1` pure-logic · `2` round-trip · `3` external-data |
 | `status` | `deferred` · `spec` · `ported` · `skipped` |
 | `notes` | required for `skipped` and `deferred`, free text otherwise |
+
+`original_test` is the bare test name as it appears in the `Testing/*/CMakeLists.txt` macro call
+(e.g. `TestArrayAPI`), **not** the executable-prefixed name CTest actually registers (e.g.
+`vtkCommonCoreCxx-TestArrayAPI`). `cargo xtask ledger-check`'s **complete** assertion parses macro
+calls directly and matches against this bare form.
 
 `original_sha` is per *file*, so rows sharing an original file share a SHA and a change to that
 file flags all of them. Coarser than per-function, and deliberately so: it costs one
@@ -558,6 +565,16 @@ Update the ledger in the same commit as the test it describes — never as a fol
 `status` disagrees with what CI actually runs is worse than no row, because the whole point is
 that parity claims stay auditable.
 
+When a module's `Testing/*/CMakeLists.txt` splices a CMake variable into a test-macro call instead
+of listing literal test names (e.g. `${data_array_tests}`, built via a `foreach` loop and
+`configure_file()` templating), `ledger-check`'s **complete** assertion cannot resolve it — this is
+permanently out of scope for the checker, not a bug. Enumerate that variable's tests by hand (read
+the generating CMake code, e.g. `add_data_array_test`, to find them) and add one ledger row per
+test as usual. Once done, at least one of those rows' `notes` must contain `generated:<variable
+name>` (e.g. `generated:data_array_tests`) — this is what tells `ledger-check` the variable has
+been manually accounted for. Without that marker, `complete` reports the variable as unresolved on
+every run.
+
 ### What CI checks about the ledger
 
 `cargo xtask ledger-check` asserts four separate things. They are separate because each catches a
@@ -569,7 +586,9 @@ failure the others cannot see:
   registered in that module's `Testing/*/CMakeLists.txt` has a row. Catches tests added upstream,
   which nothing else would: a new test is referenced by no row, so **exists** passes over it in
   silence. Scoped to started modules on purpose — unscoped it would fail on every untouched test
-  in VTK from day one, and a check that is red by default gets switched off.
+  in VTK from day one, and a check that is red by default gets switched off. A `${variable}`
+  spliced into a test-macro call instead of a literal test name is flagged as unresolved rather
+  than silently skipped — see § The test-mapping ledger for how to clear it.
 - **fresh** — every row's `original_sha` matches the file's current blob. Catches upstream
   rewriting a test we already ported.
 - **parity** — every crate that contains any code has at least one ledger row with
@@ -598,11 +617,11 @@ cargo build --workspace
 cargo test --workspace --all-features
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo fmt --all --check
+cargo xtask ledger-check
 ```
 
-`cargo xtask` commands (`ledger-check`, `test-mapping-report`, `upstream-diff`) don't exist yet —
-they are dependency-order Step 3, see `docs/superpowers/specs/2026-08-06-autonomous-operation-design.md`
-§ Dependency order.
+`cargo xtask test-mapping-report` and `cargo xtask upstream-diff` don't exist yet — the latter is
+tracked as [#44](https://github.com/rotnov/vtk.rs/issues/44); the former has no filed issue.
 
 ## Do / Don't
 

@@ -78,3 +78,18 @@ jobs:
             -p vtk-common-misc \
             -p vtk-common-data-model \
             -p vtk-common-execution-model
+
+  xtask-ledger-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: cargo xtask ledger-check
+        working-directory: rust
+        run: cargo xtask ledger-check
