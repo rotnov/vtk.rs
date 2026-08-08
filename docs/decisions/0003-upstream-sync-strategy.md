@@ -60,10 +60,10 @@ that imply four different kinds of work:
 Only the ledger can say which of these touch us, which is why it has to be trustworthy before a
 bump, not after.
 
-### Ledger integrity is a CI check, not a discipline — and it takes three assertions
+### Ledger integrity is a CI check, not a discipline — and it takes four assertions
 
 Add `cargo xtask ledger-check` to the required checks. One check walking one direction is not
-enough; each of the three failures below is invisible to the other two.
+enough; each of the four failures below is invisible to the other three.
 
 - **exists** — every `original_path` in `docs/test-mapping.csv` is present in the reference tree.
   Catches tests upstream removed or renamed.
@@ -74,12 +74,22 @@ enough; each of the three failures below is invisible to the other two.
   that is red by default gets switched off rather than fixed.
 - **fresh** — every row's `original_sha` still matches the blob SHA of its `original_path`.
   Catches upstream **rewriting** a test we already ported.
+- **parity** — every crate that contains any code has at least one ledger row with
+  `status=ported` for its module. Catches a crate reaching green CI on **own tests alone** — see
+  `docs/lessons/0006-new-rule-weakened-existing-one.md`. Permitting own tests (`AGENTS.md` §
+  Tests we write ourselves) let the 100% coverage gate go green without porting anything, because
+  an own test can cover code no VTK test exercises. Coverage and parity are deliberately separate
+  gates: coverage is satisfied by *any* test, parity only by a ported one, and this assertion is
+  what makes the second gate mechanical instead of asserted.
 
-*fresh* is the one that justifies a schema change, and it is the most valuable of the three. When
-upstream rewrites a ported test, the path exists and the row looks correct; our port keeps passing
-the assertions it was written against, CI stays green, and the behaviour we claim parity with has
-moved underneath. A removed test is noisy. This is silent, and silence is precisely what the
-ledger exists to prevent.
+*fresh* is the one that justifies the schema change from the ledger's previous three-column form,
+and it is the most valuable of the four. When upstream rewrites a ported test, the path exists and
+the row looks correct; our port keeps passing the assertions it was written against, CI stays
+green, and the behaviour we claim parity with has moved underneath. A removed test is noisy. This
+is silent, and silence is precisely what the ledger exists to prevent. *parity* is the newest of
+the four, added to close the specific gap lesson 0006 recorded — a rule change (permitting own
+tests) silently weakening an existing one (the coverage gate as a proxy for porting progress)
+without anyone re-reading how the two interact.
 
 It requires an `original_sha` column: the git blob SHA of the original file at port time. Per
 file, not per test function, so rows sharing a file share a SHA and a change flags all of them.
@@ -114,9 +124,10 @@ cost.
 
 - The bump becomes a reviewable, repeatable operation with a written output, instead of a large
   opaque commit.
-- `ledger-check` will fail on the *first* bump, loudly, on all three assertions at once — moved
-  tests, added tests, rewritten tests. That is the intended behaviour and the point of the check:
-  the work is surfaced rather than skipped.
+- `ledger-check` will fail on the *first* bump, loudly, on all three bump-sensitive assertions at
+  once — moved tests, added tests, rewritten tests. (*parity* is orthogonal to the bump; it fires
+  independently of upstream version changes.) That is the intended behaviour and the point of the
+  check: the work is surfaced rather than skipped.
 - Merging keeps history intact, so PR references and commit SHAs stay valid across bumps — unlike
   the one-off rebase that fixed the original mis-pin.
 - The `+vtk9.6.2` tag convention means anyone can tell which upstream a release was built against

@@ -62,7 +62,7 @@ needed.
       executing tests makes the tool hard-error rather than report 100%, verified empirically —
       see `docs/decisions/0001-test-coverage-metric.md`'s 2026-08-07 amendment and
       `docs/lessons/0010-adr-tool-claim-never-run.md`. Wire this job in the same PR as Phase 1's
-      first crate with an actually-executing test, not before.
+      first crate with an actually-executing test, not before. Tracked as issue #42.
 - [x] `cargo check --target wasm32-unknown-unknown` wired into CI for `Common*`/`Filters*`
       crates, per `AGENTS.md` § WebAssembly — done: `cargo-check-wasm32` job in
       `.github/workflows/rust-checks.yml`, covering all 7 `vtk-common-*` crates via explicit `-p`
@@ -72,17 +72,22 @@ needed.
 - [x] Protect `master` on `rotnov/vtk.rs` — done: PR required, 0 approvals, no direct or force
       pushes, no deletion, linear history, `enforce_admins` on.
 - [ ] Add the required status checks to that protection once CI exists. Until then "green CI is
-      the review" is an honour system, since there is nothing to require.
-- [ ] `docs/test-mapping.csv` schema + a small script/xtask to summarize coverage
-      (ported/passing/deferred counts per module), plus `cargo xtask ledger-check` — the three
-      assertions *exists* / *complete* / *fresh* — wired into CI as a required check. See
-      `docs/decisions/0003-upstream-sync-strategy.md`.
+      the review" is an honour system, since there is nothing to require. Tracked as issue #21;
+      owner has pre-authorized this repo-settings change to run as soon as `cargo xtask
+      ledger-check` (below) lands and is green.
+- [x] `docs/test-mapping.csv` schema — done, see `AGENTS.md` § The test-mapping ledger.
+- [ ] `cargo xtask ledger-check` — the four assertions *exists* / *complete* / *fresh* / *parity*
+      — wired into CI as a required check. See `docs/decisions/0003-upstream-sync-strategy.md` and
+      `docs/superpowers/specs/2026-08-06-autonomous-operation-design.md` § 4 "The parity gate
+      becomes real". Tracked as issue #41.
 - [ ] `cargo xtask upstream-diff <old-tag> <new-tag>` — bucket the upstream diff by module into
       tests added / removed / changed and sources changed in ported modules. Not needed until the
-      first version bump, but it is what makes that bump reviewable rather than opaque.
+      first version bump, but it is what makes that bump reviewable rather than opaque. Tracked as
+      issue #44.
 - [ ] Decide and record (in `docs/decisions/`) the numeric-array storage strategy for
       `vtk-common-core` (this determines a lot downstream): enum-of-typed-`Vec` vs generic
       struct, and how `vtkDataArray`'s runtime type dispatch (`vtkTemplateMacro`) maps to Rust.
+      Tracked as issue #43.
 - [x] GitHub Pages status dashboard — one live stat, percent of catalogued tests with
       `status=ported` in `docs/test-mapping.csv`, rebuilt on every push to `master` via
       `.github/workflows/pages.yml` (generator: `.github/scripts/generate_dashboard.py`). See
@@ -97,23 +102,26 @@ third-party deps are named because they are work items too, not free.
 
 - [ ] 1. `vtk-common-core` (`VTK::CommonCore`) — `DEPENDS: fast_float, fmt, kwiml, nlohmannjson,
       scn, token, vtksys` (+ optional `loguru`). No VTK-internal deps: the true root. `vtkMath`,
-      `vtkPoints`, `vtkDataArray` family, object/array base types.
+      `vtkPoints`, `vtkDataArray` family, object/array base types. Tracked as issue #45; blocked
+      on the numeric-array storage ADR, issue #43.
 - [ ] 2. `vtk-common-math` (`VTK::CommonMath`) — `DEPENDS: CommonCore, kissfft`. kissfft is
       replaced by `rustfft` + `realfft`, see `docs/decisions/0002-fft-backend.md`. Note the work
       is in `vtkFFT`'s signal-processing layer (`Spectrogram`, `Csd`, window generators, scaling
-      and octave-band helpers), not in wiring up the transform.
+      and octave-band helpers), not in wiring up the transform. Tracked as issue #46.
 - [ ] 2. `vtk-common-system` (`VTK::CommonSystem`) — `DEPENDS: CommonCore`. Independent of
-      `CommonMath`; can run in parallel with it.
+      `CommonMath`; can run in parallel with it. Tracked as issue #47.
 - [ ] 3. `vtk-common-transforms` (`VTK::CommonTransforms`) — `DEPENDS: CommonCore, CommonMath`.
+      Tracked as issue #48.
 - [ ] 3. `vtk-common-misc` (`VTK::CommonMisc`) — `DEPENDS: CommonCore, CommonMath` (+ private
       `exprtk`, backing `vtkFunctionParser` — a full expression parser, size it before starting).
+      Tracked as issue #49.
 - [ ] 4. `vtk-common-data-model` (`VTK::CommonDataModel`) — `DEPENDS: CommonCore, CommonMath,
       CommonTransforms` (+ private `CommonMisc`, `CommonSystem`, `pegtl`, `pugixml`). Cells,
       `vtkPolyData`, `vtkUnstructuredGrid`, geometry primitives. The real foundation everything
-      else builds on.
+      else builds on. Tracked as issue #50.
 - [ ] 5. `vtk-common-execution-model` (`VTK::CommonExecutionModel`) — `DEPENDS: CommonCore,
       CommonDataModel` (+ private `CommonMisc`, `CommonSystem`). The `vtkAlgorithm` pipeline
-      (`Update()`, dirty-flag propagation). Needed before any filter exists.
+      (`Update()`, dirty-flag propagation). Needed before any filter exists. Tracked as issue #51.
 
 Numbers are dependency levels, not a strict sequence: items sharing a number are independent of
 each other. So the real shape is `Core` → {`Math`, `System`} → {`Transforms`, `Misc`} →
