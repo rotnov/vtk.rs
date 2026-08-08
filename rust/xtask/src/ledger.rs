@@ -1,3 +1,4 @@
+#[allow(dead_code)] // Wired up by Task 6 in orchestration
 pub struct LedgerRow {
     pub original_path: String,
     pub original_test: String,
@@ -9,6 +10,7 @@ pub struct LedgerRow {
     pub notes: String,
 }
 
+#[allow(dead_code)] // Wired up by Task 6 in orchestration
 pub fn parse_ledger(csv_text: &str) -> Result<Vec<LedgerRow>, String> {
     let mut reader = csv::ReaderBuilder::new().from_reader(csv_text.as_bytes());
     let mut rows = Vec::new();
@@ -35,8 +37,11 @@ pub fn parse_ledger(csv_text: &str) -> Result<Vec<LedgerRow>, String> {
     Ok(rows)
 }
 
+#[allow(dead_code)] // Wired up by Task 6 in orchestration
 pub fn module_of(original_path: &str) -> Option<&str> {
-    original_path.split_once("/Testing/").map(|(module, _)| module)
+    original_path
+        .split_once("/Testing/")
+        .map(|(module, _)| module)
 }
 
 #[cfg(test)]
