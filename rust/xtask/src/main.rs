@@ -1,3 +1,4 @@
+mod cmake_parser;
 mod ledger;
 
 fn main() {
