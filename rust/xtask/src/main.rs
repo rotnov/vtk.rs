@@ -1,3 +1,4 @@
+mod assertions;
 mod cmake_parser;
 mod crates;
 mod ledger;
