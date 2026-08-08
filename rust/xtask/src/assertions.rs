@@ -197,6 +197,22 @@ mod tests {
         assert_eq!(violations[0].assertion, "fresh");
     }
 
+    #[test]
+    fn fresh_ignores_a_row_whose_path_has_no_current_sha() {
+        // A missing path is check_exists's job to flag; check_fresh must not
+        // double-report it by treating a None lookup as a drifted sha.
+        let rows = vec![row(
+            "Common/Core/Testing/Cxx/TestGone.cxx",
+            "TestGone",
+            "abc",
+            "p",
+            "ported",
+            "",
+        )];
+        let violations = check_fresh(&rows, |_| None);
+        assert!(violations.is_empty());
+    }
+
     // ---- complete ----
 
     #[test]
