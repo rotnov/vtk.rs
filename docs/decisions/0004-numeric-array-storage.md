@@ -121,8 +121,9 @@ This ADR is a considered bet, not a proven one. Before it is relied on beyond `v
 the implementation plan for `vtk-common-core` must include a synthetic microbenchmark — a
 representative kernel (e.g. a transform/reduction over `vtkPoints`-shaped coordinate data) run both
 through this design and through the equivalent upstream C++ via the reference tree — measured with
-`iai-callgrind` (deterministic instruction/cache-miss counts, not wall-clock, to avoid machine
-noise). A result showing this design is slower than the C++ it replaces does not necessarily
+`gungraun` (the actively maintained successor to `iai-callgrind`, which rebranded and stopped
+receiving releases under its old name; deterministic instruction/cache-miss counts, not wall-clock,
+to avoid machine noise). A result showing this design is slower than the C++ it replaces does not necessarily
 invalidate the storage strategy (the lock-acquisition-once pattern above may need tuning, or the
 benchmark's kernel may not be representative), but it must be resolved — either by revising this
 ADR or by explicitly accepting a documented performance cost — before the pattern is propagated
