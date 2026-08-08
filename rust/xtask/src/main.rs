@@ -1,4 +1,5 @@
 mod cmake_parser;
+mod crates;
 mod ledger;
 mod reference_tree;
 
