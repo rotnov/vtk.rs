@@ -27,5 +27,49 @@ fn bounds_of_points(points: Points) -> Option<[f64; 6]> {
     black_box(points.bounds())
 }
 
-library_benchmark_group!(name = points_bounds_group, benchmarks = bounds_of_points);
+/// Control for isolating ADR 0004's storage/dispatch cost from generic Rust-vs-C++ kernel
+/// codegen differences: byte-identical kernel body to `Points::bounds()`, but over a bare
+/// owned `Vec<f64>` — no `Arc`, no `RwLock`, no enum dispatch. Same by-value ownership (and
+/// thus the same in-region `Vec` drop) as `bounds_of_points` above, so that asymmetry cancels
+/// out of the comparison between these two benchmarks.
+fn bounds_of_slice(xyz: &[f64]) -> Option<[f64; 6]> {
+    let mut chunks = xyz.chunks_exact(3);
+    let first = chunks.next()?;
+    let mut bounds = [first[0], first[0], first[1], first[1], first[2], first[2]];
+    for p in chunks {
+        if p[0] < bounds[0] {
+            bounds[0] = p[0];
+        }
+        if p[0] > bounds[1] {
+            bounds[1] = p[0];
+        }
+        if p[1] < bounds[2] {
+            bounds[2] = p[1];
+        }
+        if p[1] > bounds[3] {
+            bounds[3] = p[1];
+        }
+        if p[2] < bounds[4] {
+            bounds[4] = p[2];
+        }
+        if p[2] > bounds[5] {
+            bounds[5] = p[2];
+        }
+    }
+    Some(bounds)
+}
+
+fn setup_coords() -> Vec<f64> {
+    generate_coords(NUM_POINTS)
+}
+
+#[library_benchmark(setup = setup_coords)]
+fn bounds_of_bare_vec(xyz: Vec<f64>) -> Option<[f64; 6]> {
+    black_box(bounds_of_slice(&xyz))
+}
+
+library_benchmark_group!(
+    name = points_bounds_group,
+    benchmarks = [bounds_of_points, bounds_of_bare_vec]
+);
 main!(library_benchmark_groups = points_bounds_group);
