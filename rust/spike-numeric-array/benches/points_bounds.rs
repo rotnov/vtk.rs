@@ -68,8 +68,45 @@ fn bounds_of_bare_vec(xyz: Vec<f64>) -> Option<[f64; 6]> {
     black_box(bounds_of_slice(&xyz))
 }
 
+/// Second, vectorization-friendly restructure of the same kernel, tried after finding upstream
+/// rust-lang/rust issues (e.g. #128077, #106539) documenting that `chunks_exact` and branchy
+/// if-comparisons are known LLVM autovectorization blockers. Two changes from `bounds_of_slice`:
+/// plain indexed access instead of `chunks_exact` (sidesteps #128077), and `f64::min`/`f64::max`
+/// (compiles to the `minnum`/`maxnum` LLVM intrinsics, branchless) instead of branchy `if`
+/// comparisons. Data volume and by-value ownership are unchanged, so it's directly comparable to
+/// `bounds_of_bare_vec` above.
+fn bounds_of_slice_indexed_minmax(xyz: &[f64]) -> Option<[f64; 6]> {
+    let n = xyz.len() / 3;
+    if n == 0 {
+        return None;
+    }
+    let mut bounds = [xyz[0], xyz[0], xyz[1], xyz[1], xyz[2], xyz[2]];
+    for i in 1..n {
+        let base = i * 3;
+        let x = xyz[base];
+        let y = xyz[base + 1];
+        let z = xyz[base + 2];
+        bounds[0] = bounds[0].min(x);
+        bounds[1] = bounds[1].max(x);
+        bounds[2] = bounds[2].min(y);
+        bounds[3] = bounds[3].max(y);
+        bounds[4] = bounds[4].min(z);
+        bounds[5] = bounds[5].max(z);
+    }
+    Some(bounds)
+}
+
+#[library_benchmark(setup = setup_coords)]
+fn bounds_of_bare_vec_indexed_minmax(xyz: Vec<f64>) -> Option<[f64; 6]> {
+    black_box(bounds_of_slice_indexed_minmax(&xyz))
+}
+
 library_benchmark_group!(
     name = points_bounds_group,
-    benchmarks = [bounds_of_points, bounds_of_bare_vec]
+    benchmarks = [
+        bounds_of_points,
+        bounds_of_bare_vec,
+        bounds_of_bare_vec_indexed_minmax
+    ]
 );
 main!(library_benchmark_groups = points_bounds_group);
