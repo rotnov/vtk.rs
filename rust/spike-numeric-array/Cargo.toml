@@ -9,6 +9,7 @@ description = "Validation spike for docs/decisions/0004-numeric-array-storage.md
 
 [dev-dependencies]
 gungraun = "0.19.4"
+wide = "1.6.1"
 
 [[bench]]
 name = "points_bounds"
