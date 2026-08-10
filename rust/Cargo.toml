@@ -8,8 +8,12 @@ members = [
     "crates/vtk-common-misc",
     "crates/vtk-common-data-model",
     "crates/vtk-common-execution-model",
+    "spike-numeric-array",
     "xtask",
 ]
+
+[profile.bench]
+debug = true
 
 [workspace.package]
 version = "0.1.0"

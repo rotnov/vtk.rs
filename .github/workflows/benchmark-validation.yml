@@ -1,0 +1,60 @@
+name: benchmark-validation
+
+on:
+  workflow_dispatch:
+
+jobs:
+  points-bounds:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - uses: gungraun/setup-gungraun@v1
+        continue-on-error: true
+        id: setup-gungraun
+        with:
+          runner-version: 0.19.4
+
+      - name: Install gungraun-runner manually if the action failed
+        if: steps.setup-gungraun.outcome == 'failure'
+        run: |
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+          cargo binstall --no-confirm gungraun-runner@0.19.4
+          sudo apt-get update && sudo apt-get install -y valgrind
+
+      - name: Install g++ and valgrind for the C++ reference implementation
+        run: sudo apt-get update && sudo apt-get install -y g++ valgrind
+
+      - name: Run Rust (gungraun) benchmark
+        working-directory: rust
+        shell: bash
+        run: cargo bench -p spike-numeric-array --bench points_bounds | tee gungraun-output.txt
+
+      - name: Run C++ reference benchmark
+        working-directory: rust/spike-numeric-array/cpp
+        shell: bash
+        run: |
+          chmod +x run_benchmark.sh
+          ./run_benchmark.sh | tee cpp-output.txt
+
+      - name: Publish results to job summary
+        run: |
+          {
+            echo "## Numeric-array storage benchmark (ADR 0004 validation)"
+            echo ""
+            echo "### Rust (gungraun)"
+            echo '```'
+            cat rust/gungraun-output.txt
+            echo '```'
+            echo ""
+            echo "### C++ reference (raw Callgrind)"
+            echo '```'
+            cat rust/spike-numeric-array/cpp/cpp-output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

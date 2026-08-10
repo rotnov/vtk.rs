@@ -1,0 +1,16 @@
+[package]
+name = "spike-numeric-array"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Validation spike for docs/decisions/0004-numeric-array-storage.md — not part of the vtk-common-core port."
+
+[dependencies]
+
+[dev-dependencies]
+gungraun = "0.19.4"
+wide = "1.6.1"
+
+[[bench]]
+name = "points_bounds"
+harness = false
