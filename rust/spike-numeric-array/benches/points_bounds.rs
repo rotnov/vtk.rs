@@ -102,6 +102,33 @@ fn bounds_of_bare_vec_indexed_minmax(xyz: Vec<f64>) -> Option<[f64; 6]> {
     black_box(bounds_of_slice_indexed_minmax(&xyz))
 }
 
+/// Fourth restructure: the untried combination noted in the SDD ledger's disassembly follow-up.
+/// The disassembly check found the ~33% gap left by `bounds_of_bare_vec_indexed_minmax` lines up
+/// with the 3 bounds checks that indexed access (`xyz[base]`) reintroduces — `chunks_exact`
+/// carries none by construction (this is why `bounds_of_bare_vec` has none either). Combines
+/// `chunks_exact` (bounds-check-free) with `f64::min`/`f64::max` (branchless `minnum`/`maxnum`)
+/// instead of the branchy `if` `bounds_of_bare_vec` still uses — the two prior restructures each
+/// took only one of these two changes.
+fn bounds_of_slice_chunked_minmax(xyz: &[f64]) -> Option<[f64; 6]> {
+    let mut chunks = xyz.chunks_exact(3);
+    let first = chunks.next()?;
+    let mut bounds = [first[0], first[0], first[1], first[1], first[2], first[2]];
+    for p in chunks {
+        bounds[0] = bounds[0].min(p[0]);
+        bounds[1] = bounds[1].max(p[0]);
+        bounds[2] = bounds[2].min(p[1]);
+        bounds[3] = bounds[3].max(p[1]);
+        bounds[4] = bounds[4].min(p[2]);
+        bounds[5] = bounds[5].max(p[2]);
+    }
+    Some(bounds)
+}
+
+#[library_benchmark(setup = setup_coords)]
+fn bounds_of_bare_vec_chunked_minmax(xyz: Vec<f64>) -> Option<[f64; 6]> {
+    black_box(bounds_of_slice_chunked_minmax(&xyz))
+}
+
 /// Third restructure, using the `wide` crate's portable SIMD types (stable-Rust alternative to
 /// the nightly-only `std::simd`). Data is interleaved AoS (x0,y0,z0,x1,y1,z1,...), so there is no
 /// contiguous 4-wide load available per axis; each `f64x4` is built from 4 strided scalar reads
@@ -181,6 +208,7 @@ library_benchmark_group!(
         bounds_of_points,
         bounds_of_bare_vec,
         bounds_of_bare_vec_indexed_minmax,
+        bounds_of_bare_vec_chunked_minmax,
         bounds_of_bare_vec_wide_simd
     ]
 );
